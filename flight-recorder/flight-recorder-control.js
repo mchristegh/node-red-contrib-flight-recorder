@@ -24,7 +24,7 @@
 const path = require("path");
 const registry = require(path.join(__dirname, "..", "lib", "store-registry.js"));
 
-const COMMANDS = ["dump", "clear", "pause", "resume", "mark", "query"];
+const COMMANDS = ["dump", "clear", "pause", "resume", "mark", "query", "mute", "unmute"];
 
 module.exports = function (RED) {
 
@@ -82,6 +82,7 @@ module.exports = function (RED) {
       let arg;
       if (command === "dump") arg = msg.context;
       else if (command === "mark") arg = msg.annotation;
+      else if (command === "mute" || command === "unmute") arg = msg.target;
 
       let result;
       try {
