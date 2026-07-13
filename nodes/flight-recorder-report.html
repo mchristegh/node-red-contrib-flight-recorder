@@ -1,0 +1,149 @@
+<!-- nodes/flight-recorder-report.html — editor definition for the report node -->
+
+<script type="text/javascript">
+(function () {
+  function interlocks() {
+    var dest = $("#node-input-destination").val();
+    var filesActive = (dest === "file" || dest === "both");
+    $("#node-input-directory, #node-input-filenameTemplate, #node-input-retention")
+      .prop("disabled", !filesActive);
+    var raw = $("#node-input-rawJson");
+    if (!filesActive) {
+      raw.prop("checked", false);
+    }
+    raw.prop("disabled", !filesActive);
+    $("#fr-report-raw-hint").toggle(!filesActive);
+  }
+
+  RED.nodes.registerType("flight-recorder-report", {
+    category: "function",
+    color: "#F0954F",
+    defaults: {
+      name:             { value: "" },
+      format:           { value: "text" },
+      destination:      { value: "message" },
+      directory:        { value: "", validate: function (v) {
+                            var dest = $("#node-input-destination").length
+                              ? $("#node-input-destination").val() : this.destination;
+                            var raw = $("#node-input-rawJson").length
+                              ? $("#node-input-rawJson").is(":checked") : this.rawJson;
+                            if (dest === "file" || dest === "both" || raw) {
+                              return typeof v === "string" && v.trim().length > 0;
+                            }
+                            return true;
+                          } },
+      filenameTemplate: { value: "{date}_{time}_{trigger}_{storeId}" },
+      rawJson:          { value: false },
+      retention:        { value: "100", validate: RED.validators.number() },
+      previewChars:     { value: "60", validate: RED.validators.number() }
+    },
+    inputs: 1,
+    outputs: 1,
+    icon: "font-awesome/fa-file-text-o",
+    paletteLabel: "recorder report",
+    label: function () { return this.name || "recorder report"; },
+    labelStyle: function () { return this.name ? "node_label_italic" : ""; },
+    inputLabels: "incidents, snapshots, or events",
+    outputLabels: ["report / confirmation"],
+    oneditprepare: function () {
+      $("#node-input-destination").on("change", interlocks);
+      $("#node-input-rawJson").on("change", interlocks);
+      interlocks();
+    }
+  });
+})();
+</script>
+
+<script type="text/html" data-template-name="flight-recorder-report">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-format"><i class="fa fa-file-text-o"></i> Format</label>
+    <select id="node-input-format" style="width:180px">
+      <option value="text">plain text</option>
+      <option value="markdown">Markdown</option>
+      <option value="html">HTML</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-destination"><i class="fa fa-share"></i> Send to</label>
+    <select id="node-input-destination" style="width:180px">
+      <option value="message">message only</option>
+      <option value="file">file only</option>
+      <option value="both">message + file</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-directory"><i class="fa fa-folder-open"></i> Directory</label>
+    <input type="text" id="node-input-directory" style="width:70%" placeholder="/absolute/path/to/reports">
+  </div>
+  <div class="form-row">
+    <label for="node-input-filenameTemplate"><i class="fa fa-i-cursor"></i> Filename</label>
+    <input type="text" id="node-input-filenameTemplate" style="width:70%"
+      placeholder="{date}_{time}_{trigger}_{storeId}">
+  </div>
+  <div class="form-tips">Tokens: <code>{date}</code> <code>{time}</code>
+  <code>{trigger}</code> <code>{storeId}</code> <code>{incidentId}</code>
+  <code>{format}</code>. Collisions get a <code>-2</code> suffix — existing
+  reports are never overwritten.</div>
+  <div class="form-row">
+    <label for="node-input-rawJson"><i class="fa fa-file-code-o"></i> Raw JSON</label>
+    <input type="checkbox" id="node-input-rawJson" style="width:auto; vertical-align:middle;">
+    <span style="margin-left:6px;">also save the untouched incident/snapshot as
+      <code>.json</code>, paired by filename stem</span>
+    <span id="fr-report-raw-hint" style="margin-left:6px;color:#ad1625;display:none">(requires file output)</span>
+  </div>
+  <div class="form-row">
+    <label for="node-input-retention"><i class="fa fa-recycle"></i> Retention</label>
+    <input type="text" id="node-input-retention" style="width:100px" placeholder="100">
+    <span style="margin-left:6px;">newest incidents kept (report+JSON pruned as a pair; 0 = unlimited)</span>
+  </div>
+  <div class="form-row">
+    <label for="node-input-previewChars"><i class="fa fa-text-width"></i> Preview</label>
+    <input type="text" id="node-input-previewChars" style="width:100px" placeholder="60">
+    <span style="margin-left:6px;">payload preview width in the timeline</span>
+  </div>
+</script>
+
+<script type="text/html" data-help-name="flight-recorder-report">
+  <p>Renders flight recorder output as a human-readable report — and
+  optionally archives it to disk, turning "auto-dump on error" into "a dated
+  post-mortem report appears in a directory".</p>
+
+  <h3>Input (auto-detected)</h3>
+  <p>Wire it to any recorder output. <b>Incidents</b> render as a summary plus
+  a timeline: one line per record with relative time, gap since the previous
+  capture, source node and a payload preview. Annotation marks, mute/unmute
+  and restart boundaries appear as full-width rules in sequence position;
+  gaps ≥ 3× the median are flagged <code>⚠</code>; truncated records are
+  marked <code>✂</code>. <b>Query snapshots</b> render as a status report.
+  <b>Recorder events</b> render as one-line entries (message only, never
+  filed). Anything else passes with a one-line note, the original preserved
+  under <code>msg.report.source</code>.</p>
+
+  <h3>Output</h3>
+  <p><code>msg.payload</code> is the rendered document (or, in file-only
+  mode, a confirmation line naming the files written).
+  <code>msg.report</code> carries <code>kind</code>, <code>format</code>,
+  <code>source</code> (the untouched original payload) and
+  <code>files</code> — per-file results including failures, so a partial
+  write is never invisible.</p>
+
+  <h3>Files</h3>
+  <p>With a file destination, reports land in the configured directory using
+  the filename template. The <b>Raw JSON</b> option additionally saves the
+  bit-for-bit incident or snapshot as <code>.json</code> with the same
+  filename stem — the readable report and its evidence, side by side. Raw
+  JSON requires file output and a directory. Name collisions get
+  <code>-2</code>/<code>-3</code> suffixes; retention keeps the newest N
+  incidents, pruning report and JSON together and only ever touching files
+  matching this node's own template.</p>
+
+  <h3>Formats</h3>
+  <p><b>text</b> is monospace-aligned for the debug sidebar and logs;
+  <b>Markdown</b> suits files, chats and issues; <b>HTML</b> is a single
+  self-contained file (inline styles, no external resources) that opens
+  directly in a browser.</p>
+</script>

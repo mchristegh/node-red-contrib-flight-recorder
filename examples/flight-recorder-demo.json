@@ -148,7 +148,7 @@
         "watermarkValue": "",
         "x": 350, "y": 280,
         "wires": [
-            [ "frdemo.dbg.tap.incidents" ],
+            [ "frdemo.dbg.tap.incidents", "frdemo.rec.report" ],
             [ "frdemo.dbg.tap.query" ],
             [ "frdemo.dbg.tap.events" ]
         ]
@@ -369,6 +369,38 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 790, "y": 610,
+        "wires": []
+    },
+
+    {
+        "id": "frdemo.rec.report",
+        "type": "flight-recorder-report",
+        "z": "frdemo.tab",
+        "name": "incident reports",
+        "format": "text",
+        "destination": "message",
+        "directory": "",
+        "filenameTemplate": "{date}_{time}_{trigger}_{storeId}",
+        "rawJson": false,
+        "retention": "100",
+        "previewChars": "60",
+        "x": 800, "y": 200,
+        "wires": [ [ "frdemo.dbg.report" ] ]
+    },
+    {
+        "id": "frdemo.dbg.report",
+        "type": "debug",
+        "z": "frdemo.tab",
+        "name": "RENDERED report",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1010, "y": 200,
         "wires": []
     },
 
