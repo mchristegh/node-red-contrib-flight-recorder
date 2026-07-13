@@ -1,0 +1,40 @@
+{
+  "name": "node-red-contrib-flight-recorder",
+  "version": "0.1.0",
+  "description": "A flight recorder for Node-RED flows: rolling message recordings, dumped as structured incidents on demand, on error, or on watermark match. Inline and tap capture, cockpit-style control node, crash-surviving persistence.",
+  "keywords": [
+    "node-red",
+    "recorder",
+    "debug",
+    "debugging",
+    "logging",
+    "blackbox",
+    "black-box",
+    "diagnostics",
+    "incident",
+    "ring-buffer",
+    "flight-recorder"
+  ],
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=16"
+  },
+  "node-red": {
+    "version": ">=1.1.0",
+    "nodes": {
+      "flight-recorder": "nodes/flight-recorder.js",
+      "flight-recorder-tap": "nodes/flight-recorder-tap.js",
+      "flight-recorder-control": "nodes/flight-recorder-control.js"
+    }
+  },
+  "scripts": {
+    "test": "node test-scripts/normalize-harness.js && node test-scripts/core-harness.js && node test-scripts/persistence-harness.js && node test-scripts/inline-harness.js && node test-scripts/control-harness.js && node test-scripts/tap-harness.js && node test-scripts/html-sanity.js"
+  },
+  "files": [
+    "nodes",
+    "lib",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ]
+}

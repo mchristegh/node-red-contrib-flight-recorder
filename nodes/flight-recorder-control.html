@@ -1,0 +1,103 @@
+<!-- nodes/flight-recorder-control.html — editor definition for the control node -->
+
+<script type="text/javascript">
+(function () {
+  RED.nodes.registerType("flight-recorder-control", {
+    category: "function",
+    color: "#F0954F",
+    defaults: {
+      name:   { value: "" },
+      target: { value: "", required: true }
+    },
+    inputs: 1,
+    outputs: 1,
+    icon: "font-awesome/fa-sliders",
+    paletteLabel: "recorder control",
+    label: function () {
+      if (this.name) return this.name;
+      var t = RED.nodes.node(this.target);
+      return t ? "control: " + (t.name || t.paletteLabel || "recorder") : "recorder control";
+    },
+    labelStyle: function () { return this.name ? "node_label_italic" : ""; },
+    inputLabels: "commands",
+    outputLabels: ["ack"],
+    oneditprepare: function () {
+      // Populate the target picker with every recorder in the workspace.
+      var select = $("#node-input-target");
+      var current = this.target;
+      select.empty();
+      select.append($("<option>").val("").text("— select a recorder —"));
+      var found = false;
+      RED.nodes.eachNode(function (nn) {
+        if (nn.type === "flight-recorder" || nn.type === "flight-recorder-tap") {
+          var ws = RED.nodes.workspace(nn.z);
+          var flowLabel = ws ? ws.label : nn.z;
+          var kind = nn.type === "flight-recorder-tap" ? "tap" : "inline";
+          var text = (nn.name || "(unnamed)") + " — " + kind + " on '" + flowLabel + "'";
+          var opt = $("<option>").val(nn.id).text(text);
+          if (nn.id === current) { opt.prop("selected", true); found = true; }
+          select.append(opt);
+        }
+      });
+      if (current && !found) {
+        // configured target no longer exists: keep it visible so the user
+        // understands why commands are nacking, rather than silently blanking
+        select.append($("<option>").val(current).prop("selected", true)
+          .text("(missing recorder: " + current + ")"));
+      }
+    }
+  });
+})();
+</script>
+
+<script type="text/html" data-template-name="flight-recorder-control">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-target"><i class="fa fa-crosshairs"></i> Recorder</label>
+    <select id="node-input-target" style="width:70%"></select>
+  </div>
+  <div class="form-tips">Wire inject nodes into this control to build a
+  cockpit panel for the selected recorder. Commands go in
+  <code>msg.payload</code>; each command emits a receipt on the ack output.</div>
+</script>
+
+<script type="text/html" data-help-name="flight-recorder-control">
+  <p>The cockpit panel for a <b>flight recorder</b>: an input-only command
+  node targeting one recorder (inline or tap). Its entire input is commands
+  by definition — so the inline recorder's traffic wire stays pure.</p>
+
+  <h3>Commands</h3>
+  <p><code>msg.payload</code> (string, case-insensitive):
+  <code>dump</code>, <code>clear</code>, <code>pause</code>,
+  <code>resume</code>, <code>mark</code>, <code>query</code>,
+  <code>mute</code>, <code>unmute</code>.</p>
+  <dl class="message-properties">
+    <dt class="optional">context <span class="property-type">object</span></dt>
+    <dd>attached to <code>dump</code> as the incident context.</dd>
+    <dt class="optional">annotation <span class="property-type">object | string</span></dt>
+    <dd>attached to <code>mark</code> — laid onto the tape in sequence position.</dd>
+    <dt class="optional">target <span class="property-type">object</span></dt>
+    <dd>for <code>mute</code>/<code>unmute</code> (tap recorders):
+    <code>{ "node": "&lt;id&gt;" }</code>, <code>{ "type": "mqtt in" }</code>
+    or <code>{ "flow": "&lt;tab id&gt;" }</code>.</dd>
+  </dl>
+
+  <h3>Where results go</h3>
+  <p>Incidents, query snapshots and events appear on the <b>target
+  recorder's</b> outputs — the recorder stays the single source of truth for
+  wiring. This node's <b>ack</b> output emits a receipt per command:
+  <code>payload.ok</code>, <code>payload.command</code>,
+  <code>payload.result</code> (or <code>payload.reason</code> on failure),
+  plus <code>inReplyTo</code> echoing the triggering
+  <code>msg._msgid</code>.</p>
+
+  <h3>Failure behavior</h3>
+  <p>Bad payloads, unknown commands, and missing or undeployed targets never
+  throw: each produces a warn, a red status, and an
+  <code>ok: false</code> receipt with a reason. Note that <code>mute</code>
+  aimed at an <i>inline</i> recorder is acknowledged by the recorder as an
+  ignored command — muting is a tap concept.</p>
+</script>

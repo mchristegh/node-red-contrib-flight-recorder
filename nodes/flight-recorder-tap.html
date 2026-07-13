@@ -1,0 +1,205 @@
+<!-- nodes/flight-recorder-tap.html — editor definition for the tap recorder -->
+
+<script type="text/javascript">
+(function () {
+  function watermarkValueToggle() {
+    var op = $("#node-input-watermarkOperator").val();
+    var disabled = (op === "none" || op === "exists" || op === "notexists");
+    $("#node-input-watermarkValue").prop("disabled", disabled);
+  }
+  function scopeToggle() {
+    var all = $("#node-input-scopeAllFlows").is(":checked");
+    $("#node-input-scopeFlows, #node-input-scopeNodes, #node-input-scopeTypes")
+      .prop("disabled", all);
+  }
+
+  RED.nodes.registerType("flight-recorder-tap", {
+    category: "function",
+    color: "#F0954F",
+    defaults: {
+      name:               { value: "" },
+      scopeAllFlows:      { value: false },
+      scopeFlows:         { value: "" },
+      scopeNodes:         { value: "" },
+      scopeTypes:         { value: "" },
+      excludeNodes:       { value: "" },
+      excludeTypes:       { value: "" },
+      autoErrorDump:      { value: false },
+      capacity:           { value: "100", validate: RED.validators.number() },
+      captureMode:        { value: "full" },
+      maxRecordBytes:     { value: "16384", validate: RED.validators.number() },
+      redactPaths:        { value: "" },
+      persist:            { value: false },
+      incidentCooldownMs: { value: "0", validate: RED.validators.number() },
+      watermarkProperty:  { value: "" },
+      watermarkOperator:  { value: "none" },
+      watermarkValue:     { value: "" }
+    },
+    inputs: 1,
+    outputs: 3,
+    icon: "font-awesome/fa-rss",
+    paletteLabel: "recorder tap",
+    label: function () { return this.name || "flight recorder tap"; },
+    labelStyle: function () { return this.name ? "node_label_italic" : ""; },
+    inputLabels: "commands only",
+    outputLabels: function (i) {
+      return ["incidents", "query", "events"][i];
+    },
+    oneditprepare: function () {
+      $("#node-input-watermarkOperator").on("change", watermarkValueToggle);
+      watermarkValueToggle();
+      $("#node-input-scopeAllFlows").on("change", scopeToggle);
+      scopeToggle();
+    }
+  });
+})();
+</script>
+
+<script type="text/html" data-template-name="flight-recorder-tap">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+
+  <h4>Scope — what to record</h4>
+  <div class="form-row">
+    <label for="node-input-scopeAllFlows"><i class="fa fa-globe"></i> All flows</label>
+    <input type="checkbox" id="node-input-scopeAllFlows" style="width:auto; vertical-align:middle;">
+    <span style="margin-left:6px;">record every node in the runtime</span>
+  </div>
+  <div class="form-row">
+    <label for="node-input-scopeFlows"><i class="fa fa-window-maximize"></i> Flows</label>
+    <input type="text" id="node-input-scopeFlows" style="width:70%" placeholder="flow (tab) ids, comma separated">
+  </div>
+  <div class="form-row">
+    <label for="node-input-scopeNodes"><i class="fa fa-cube"></i> Nodes</label>
+    <input type="text" id="node-input-scopeNodes" style="width:70%" placeholder="node ids, comma separated">
+  </div>
+  <div class="form-row">
+    <label for="node-input-scopeTypes"><i class="fa fa-cubes"></i> Types</label>
+    <input type="text" id="node-input-scopeTypes" style="width:70%" placeholder="node types, e.g. mqtt in, http request">
+  </div>
+  <div class="form-row">
+    <label for="node-input-excludeNodes"><i class="fa fa-minus-circle"></i> Excl. nodes</label>
+    <input type="text" id="node-input-excludeNodes" style="width:70%" placeholder="node ids to always exclude">
+  </div>
+  <div class="form-row">
+    <label for="node-input-excludeTypes"><i class="fa fa-minus-circle"></i> Excl. types</label>
+    <input type="text" id="node-input-excludeTypes" style="width:70%" placeholder="node types to always exclude">
+  </div>
+  <div class="form-tips">Scope = (flows &cup; nodes &cup; types) &minus; exclusions.
+  Flight-recorder nodes themselves are always excluded.</div>
+
+  <h4>Triggers</h4>
+  <div class="form-row">
+    <label for="node-input-autoErrorDump"><i class="fa fa-exclamation-triangle"></i> On error</label>
+    <input type="checkbox" id="node-input-autoErrorDump" style="width:auto; vertical-align:middle;">
+    <span style="margin-left:6px;">auto-dump an incident when an in-scope node reports an error</span>
+  </div>
+  <div class="form-row">
+    <label><i class="fa fa-flag"></i> Watermark</label>
+    <input type="text" id="node-input-watermarkProperty" style="width:170px" placeholder="msg property, e.g. payload.temp">
+    <select id="node-input-watermarkOperator" style="width:110px">
+      <option value="none">disabled</option>
+      <option value="eq">==</option>
+      <option value="neq">!=</option>
+      <option value="gt">&gt;</option>
+      <option value="gte">&gt;=</option>
+      <option value="lt">&lt;</option>
+      <option value="lte">&lt;=</option>
+      <option value="contains">contains</option>
+      <option value="exists">exists</option>
+      <option value="notexists">not exists</option>
+    </select>
+    <input type="text" id="node-input-watermarkValue" style="width:110px" placeholder="value">
+  </div>
+  <div class="form-row">
+    <label for="node-input-incidentCooldownMs"><i class="fa fa-clock-o"></i> Cooldown</label>
+    <input type="text" id="node-input-incidentCooldownMs" style="width:100px" placeholder="0">
+    <span style="margin-left:6px;">ms between automatic incidents (0 = none)</span>
+  </div>
+
+  <h4>Recording</h4>
+  <div class="form-row">
+    <label for="node-input-capacity"><i class="fa fa-database"></i> Capacity</label>
+    <input type="text" id="node-input-capacity" style="width:100px" placeholder="100">
+    <span style="margin-left:6px;">messages kept in the recording</span>
+  </div>
+  <div class="form-row">
+    <label for="node-input-captureMode"><i class="fa fa-camera"></i> Capture</label>
+    <select id="node-input-captureMode" style="width:180px">
+      <option value="full">full messages</option>
+      <option value="summary">summaries only</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="node-input-maxRecordBytes"><i class="fa fa-compress"></i> Max bytes</label>
+    <input type="text" id="node-input-maxRecordBytes" style="width:100px" placeholder="16384">
+    <span style="margin-left:6px;">per record before falling back to a summary</span>
+  </div>
+  <div class="form-row" style="align-items:flex-start;">
+    <label for="node-input-redactPaths" style="vertical-align:top"><i class="fa fa-user-secret"></i> Redact</label>
+    <textarea id="node-input-redactPaths" rows="3" style="width:70%"
+      placeholder="one msg property path per line, e.g.&#10;payload.password&#10;headers.authorization"></textarea>
+  </div>
+  <div class="form-row">
+    <label for="node-input-persist"><i class="fa fa-hdd-o"></i> Persist</label>
+    <input type="checkbox" id="node-input-persist" style="width:auto; vertical-align:middle;">
+    <span style="margin-left:6px;">recording survives deploys and restarts</span>
+  </div>
+</script>
+
+<script type="text/html" data-help-name="flight-recorder-tap">
+  <p>An ambient <b>flight recorder</b>: records messages flowing through
+  <i>other</i> nodes — without touching their wires — via the Node-RED
+  messaging hooks. Drop one on a dedicated debug flow, point its scope at
+  your production flows, and get a black box for the whole runtime.</p>
+
+  <h3>Scope</h3>
+  <p>Selection = (flows &cup; nodes &cup; types) &minus; exclusions, decided
+  at deploy time (membership is static; new in-scope nodes are picked up
+  automatically on first sight). Flight-recorder nodes are always excluded —
+  recorders never record recorders.</p>
+
+  <h3>What the tap can and cannot see</h3>
+  <p>Hooks observe messages <i>between</i> nodes: each record is a message a
+  node <i>sent</i>. The tap cannot see inside a function node's logic, nor
+  messages a node swallows. A message fanning out to several wires is
+  recorded once, tagged with its source node and output port.</p>
+
+  <h3>Outputs</h3>
+  <ol>
+    <li><b>Incidents</b> — recording dumps (manual, error, or watermark
+      triggered).</li>
+    <li><b>Query</b> — status snapshots, including active mutes and scope
+      counters under <code>payload.tap</code>.</li>
+    <li><b>Events</b> — everything observable, tagged
+      <code>msg.recorderEvent</code>.</li>
+  </ol>
+
+  <h3>Commands (input or a flight-recorder-control node)</h3>
+  <p>The input is a command port only: <code>dump</code>, <code>clear</code>,
+  <code>pause</code>, <code>resume</code>, <code>mark</code>,
+  <code>query</code>, <code>mute</code>, <code>unmute</code> as
+  <code>msg.payload</code> (case-insensitive). <code>msg.context</code>
+  accompanies <code>dump</code>; <code>msg.annotation</code> accompanies
+  <code>mark</code>; <code>msg.target</code> accompanies
+  <code>mute</code>/<code>unmute</code> — e.g.
+  <code>{ "node": "&lt;id&gt;" }</code>, <code>{ "type": "mqtt in" }</code> or
+  <code>{ "flow": "&lt;tab id&gt;" }</code>.</p>
+
+  <h3>Mute</h3>
+  <p>Muting silences one channel while the tape rolls; suppressed messages are
+  counted, mute/unmute lay annotation marks on the tape, and
+  <code>query</code> lists active mutes — a muted gap is never invisible.
+  Mutes are ephemeral (reset on deploy/restart); for permanent silence use the
+  exclusion lists. A muted source's chatter is suppressed, but its
+  <b>errors still trigger auto-dump</b>.</p>
+
+  <h3>Automatic error incidents</h3>
+  <p>With <i>On error</i> enabled, an error reported by an in-scope node dumps
+  the recording with the error, source and offending message attached as
+  context (subject to the cooldown). Note this relies on nodes reporting
+  errors properly; a hard runtime crash fires no hook — that is what
+  persistence is for.</p>
+</script>
