@@ -30,7 +30,7 @@ const path = require("path");
 const { RecorderStore } = require(path.join(__dirname, "..", "lib", "recorder-core.js"));
 const registry = require(path.join(__dirname, "..", "lib", "store-registry.js"));
 const inlineInternals = require(path.join(__dirname, "flight-recorder.js"))._internal;
-const { buildStoreConfig, makeWatermark, makePersistenceAdapter } = inlineInternals;
+const { buildStoreConfig, makeWatermark, makePersistenceAdapter, buildMeta } = inlineInternals;
 
 const FAMILY_TYPES = [
   "flight-recorder", "flight-recorder-tap",
@@ -71,6 +71,7 @@ module.exports = function (RED) {
 
     const store = new RecorderStore(node.id, cfg, {
       persistence: persistence,
+      meta: buildMeta(RED),
       log: { warn: (m) => node.warn(m), error: (e) => node.error(e) }
     });
     store.attach(node);

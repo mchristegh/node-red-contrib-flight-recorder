@@ -2,7 +2,7 @@
     {
         "id": "frdemo.tab",
         "type": "tab",
-        "label": "Flight Recorder Demo",
+        "label": "Flight Recorder Full Demo",
         "disabled": false,
         "info": "A self-demonstrating flight recorder setup.\n\nRow 1: an inject fires every 2s into a simulated sensor that errors every 10th reading. An INLINE recorder sits on the wire with a watermark (temp > 90) and passes traffic through untouched.\n\nRow 2: a TAP recorder is scoped to this whole tab with auto-error dumps enabled — the sensor's periodic error produces an automatic incident.\n\nRow 3: control panels. Inject buttons issue dump / pause / resume / mark / query to each recorder; receipts appear on the acks debug.\n\nDeploy, open the debug sidebar, and incidents will start arriving within seconds."
     },

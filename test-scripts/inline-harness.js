@@ -283,6 +283,21 @@ const userDir = fs.mkdtempSync(path.join(os.tmpdir(), "flightrec-p4-"));
     await node.close(false);
   }
 
+  // =========================================================================
+  // I12: incidents carry environment meta built by the node
+  // =========================================================================
+  {
+    const node = makeNode(RED, { id: "i12-node" });
+    node.receive({ payload: 1 });
+    const inc = registry.get("i12-node").runCommand("dump");
+    check("I12 meta present", inc.meta && typeof inc.meta === "object", JSON.stringify(inc.meta));
+    check("I12 package version", /^node-red-contrib-flight-recorder@\d+\.\d+\.\d+$/.test(inc.meta.package),
+          inc.meta.package);
+    check("I12 node version", inc.meta.node === process.version);
+    check("I12 hostname present", typeof inc.meta.hostname === "string" && inc.meta.hostname.length > 0);
+    await node.close(false);
+  }
+
   // ---------------------------------------------------------------------------
   console.log("");
   if (failures) {

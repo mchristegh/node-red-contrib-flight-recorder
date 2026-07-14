@@ -366,6 +366,19 @@ const userDir = fs.mkdtempSync(path.join(os.tmpdir(), "flightrec-p6-"));
     await tap.close(false); await ctl.close(false);
   }
 
+  // =========================================================================
+  // S13: tap incidents carry environment meta
+  // =========================================================================
+  {
+    const tap = makeTap(RED, { id: "s13-tap", scopeAllFlows: true });
+    emit(RED, func1, { payload: 1 });
+    const inc = registry.get("s13-tap").runCommand("dump");
+    check("S13 meta present", inc.meta &&
+          /^node-red-contrib-flight-recorder@\d+\.\d+\.\d+$/.test(inc.meta.package),
+          JSON.stringify(inc.meta));
+    await tap.close(false);
+  }
+
   // ---------------------------------------------------------------------------
   console.log("");
   if (failures) {

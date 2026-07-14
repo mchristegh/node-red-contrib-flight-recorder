@@ -36,13 +36,18 @@ const RUNTIME_KEYS = {
     "persist", "incidentCooldownMs",
     "watermarkProperty", "watermarkOperator", "watermarkValue"
   ],
-  "flight-recorder-control": ["name", "target"]
+  "flight-recorder-control": ["name", "target"],
+  "flight-recorder-report": [
+    "name", "format", "destination", "directory", "filenameTemplate",
+    "rawJson", "retention", "previewChars"
+  ]
 };
 
 const EXPECTED_PORTS = {
   "flight-recorder":         { inputs: 1, outputs: 4 },
   "flight-recorder-tap":     { inputs: 1, outputs: 3 },
-  "flight-recorder-control": { inputs: 1, outputs: 1 }
+  "flight-recorder-control": { inputs: 1, outputs: 1 },
+  "flight-recorder-report":  { inputs: 1, outputs: 1 }
 };
 
 function extract(html, openTagRe) {

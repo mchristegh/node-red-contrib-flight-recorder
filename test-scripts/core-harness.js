@@ -469,6 +469,28 @@ function collect(store, event) {
         s.records[0].msg.payloadPreview === "hello", JSON.stringify(s.records[0].msg));
 }
 
+// ===========================================================================
+// C16: incident meta — attached when injected, absent when not
+// ===========================================================================
+{
+  const env = makeEnv();
+  const meta = { package: "node-red-contrib-flight-recorder@0.2.0",
+    nodeRed: "4.0.0", node: "v22.0.0", hostname: "test-host" };
+  const s = new RecorderStore("c16", { capacity: 5 }, {
+    now: env.now, setTimeout: env.setTimeout, clearTimeout: env.clearTimeout,
+    log: quietLog, meta: meta
+  });
+  s.capture({ msg: { payload: 1 }, sourceId: "n" });
+  const inc = s.dump("manual");
+  check("C16 meta attached", inc.meta === meta, JSON.stringify(inc.meta));
+  check("C16 meta on auto triggers too", s.dump("error", {}).meta === meta);
+  check("C16 meta not in query", s.query().meta === undefined);
+
+  const bare = makeStore("c16b", { capacity: 5 }, env);
+  bare.capture({ msg: { payload: 1 }, sourceId: "n" });
+  check("C16 absent without deps", !("meta" in bare.dump("manual")));
+}
+
 // ---------------------------------------------------------------------------
 console.log("");
 if (failures) {

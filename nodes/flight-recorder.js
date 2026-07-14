@@ -100,6 +100,28 @@ function makePersistenceAdapter(RED, node, wantPersist) {
   return createFilePersistence(userDir);
 }
 
+// environment metadata attached to every incident: a post-mortem file read
+// months later should say what produced it
+function buildMeta(RED) {
+  let pkgVersion = null;
+  try {
+    pkgVersion = require(path.join(__dirname, "..", "package.json")).version;
+  } catch (e) { /* leave null */ }
+  let redVersion = null;
+  try {
+    if (RED.settings && RED.settings.version) redVersion = RED.settings.version;
+    else if (typeof RED.version === "function") redVersion = RED.version();
+  } catch (e) { /* leave null */ }
+  let hostname = null;
+  try { hostname = require("os").hostname(); } catch (e) { /* leave null */ }
+  return {
+    package: "node-red-contrib-flight-recorder@" + (pkgVersion || "?"),
+    nodeRed: redVersion,
+    node: process.version,
+    hostname: hostname
+  };
+}
+
 module.exports = function (RED) {
 
   function FlightRecorderNode(n) {
@@ -114,6 +136,7 @@ module.exports = function (RED) {
 
     const store = new RecorderStore(node.id, cfg, {
       persistence: persistence,
+      meta: buildMeta(RED),
       log: { warn: (m) => node.warn(m), error: (e) => node.error(e) }
     });
     store.attach(node);
@@ -251,5 +274,5 @@ module.exports = function (RED) {
 
 // internals reused by the tap node (phase 6) and harnesses
 module.exports._internal = {
-  buildStoreConfig, parseRedactPaths, makeWatermark, getByPath, makePersistenceAdapter
+  buildStoreConfig, parseRedactPaths, makeWatermark, getByPath, makePersistenceAdapter, buildMeta
 };

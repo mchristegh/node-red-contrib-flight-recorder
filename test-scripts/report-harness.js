@@ -429,6 +429,31 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
           !re.test("2026-07-13_error.txt"));
   }
 
+  // =========================================================================
+  // R16: incident meta renders as a runtime line; absence tolerated
+  // =========================================================================
+  {
+    const withMeta = JSON.parse(JSON.stringify(incident));
+    withMeta.meta = { package: "node-red-contrib-flight-recorder@0.2.0",
+      nodeRed: "4.0.2", node: "v22.22.2", hostname: "yellow" };
+    const txt = render({ payload: withMeta }, { format: "text" }).output;
+    check("R16 text runtime line", txt.includes(
+      " runtime    node-red-contrib-flight-recorder@0.2.0 · Node-RED 4.0.2 · node v22.22.2 · host yellow"),
+      (txt.match(/ runtime.*$/m) || [])[0]);
+    const md = render({ payload: withMeta }, { format: "markdown" }).output;
+    check("R16 md runtime line", md.includes("*node-red-contrib-flight-recorder@0.2.0 · Node-RED 4.0.2"));
+    const html = render({ payload: withMeta }, { format: "html" }).output;
+    check("R16 html runtime line", html.includes("host yellow"));
+
+    const partial = JSON.parse(JSON.stringify(incident));
+    partial.meta = { package: "node-red-contrib-flight-recorder@0.2.0", nodeRed: null,
+      node: "v22.0.0", hostname: null };
+    check("R16 null fields skipped", render({ payload: partial }, {}).output.includes(
+      " runtime    node-red-contrib-flight-recorder@0.2.0 · node v22.0.0"));
+
+    check("R16 no meta, no line", !render({ payload: incident }, {}).output.includes(" runtime "));
+  }
+
   // ---------------------------------------------------------------------------
   console.log("");
   if (failures) {

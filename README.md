@@ -12,6 +12,8 @@ Like real flight recorders, the nodes are orange.
 
 **recorder control** (`flight-recorder-control`) — the cockpit panel. An input-only node targeting one recorder; wire inject buttons into it to issue commands. Every command emits a receipt on its ack output, and results (incidents, query snapshots) appear on the *target recorder's* outputs, which stay the single source of truth for wiring.
 
+**recorder report** (`flight-recorder-report`) — the post-mortem archiver. Wire it to any recorder output and it renders incidents as readable reports (summary plus a timeline with gap anomalies flagged, marks and restart boundaries in sequence position), query snapshots as status reports, and recorder events as one-line entries. Reports go to the message, to files in a directory of your choosing (text, Markdown, or self-contained HTML), or both — with an optional raw-JSON companion file sharing the same filename stem, so the readable report and its bit-for-bit evidence sit side by side. Collisions are suffixed rather than overwritten, and retention keeps the newest N incidents, pruning report and JSON as a pair. Tap with auto-error on → report node with a directory = every error becomes a dated post-mortem file, automatically.
+
 ## Quick start
 
 Install into your Node-RED user directory (typically `~/.node-red`):
@@ -21,7 +23,7 @@ cd ~/.node-red
 npm install node-red-contrib-flight-recorder
 ```
 
-Restart Node-RED, then use **Import → Examples → node-red-contrib-flight-recorder** to load the demo flow: a simulated sensor that occasionally errors, an inline recorder with a watermark, a tap with auto-error dumps, and control panels for both. An incident will fire within seconds of deploying.
+Restart Node-RED, then use **Import → Examples → node-red-contrib-flight-recorder** to load an example. Start with **Simple Inline** (drop a recorder on a wire, press dump, read the report) or **Simple Tap** (a flow that doesn't know it's being watched; error reports appear hands-free), then graduate to the **Full Demo** for watermarks, cockpit controls, pause/mark/mute and more. Every example works with zero configuration — deploy and watch the debug sidebar.
 
 ## Commands
 
