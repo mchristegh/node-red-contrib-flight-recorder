@@ -12,6 +12,32 @@
     $("#node-input-scopeFlows, #node-input-scopeNodes, #node-input-scopeTypes")
       .prop("disabled", all);
   }
+  function scopeFlowIds() {
+    return $("#node-input-scopeFlows").val().split(/[\n,]/)
+      .map(function (s) { return s.trim(); })
+      .filter(function (s) { return s.length > 0; });
+  }
+  function populateFlowList() {
+    var list = $("#fr-tap-flow-list");
+    list.empty();
+    var current = scopeFlowIds();
+    RED.nodes.eachWorkspace(function (ws) {
+      var selected = current.indexOf(ws.id) !== -1;
+      var link = $('<a href="#" style="margin-right:12px;white-space:nowrap;text-decoration:none;"></a>')
+        .html((selected ? '<i class="fa fa-check-square-o"></i> ' : '<i class="fa fa-square-o"></i> ') +
+              RED.utils.sanitize(ws.label || ws.id))
+        .attr("title", ws.id + (selected ? " — click to remove" : " — click to add"))
+        .on("click", function (e) {
+          e.preventDefault();
+          var ids = scopeFlowIds();
+          var idx = ids.indexOf(ws.id);
+          if (idx === -1) ids.push(ws.id); else ids.splice(idx, 1);
+          $("#node-input-scopeFlows").val(ids.join(", ")).trigger("change");
+          populateFlowList();
+        });
+      list.append(link);
+    });
+  }
 
   RED.nodes.registerType("flight-recorder-tap", {
     category: "function",
@@ -50,6 +76,8 @@
       watermarkValueToggle();
       $("#node-input-scopeAllFlows").on("change", scopeToggle);
       scopeToggle();
+      $("#node-input-scopeFlows").on("change keyup", function () { populateFlowList(); });
+      populateFlowList();
     }
   });
 })();
@@ -70,6 +98,10 @@
   <div class="form-row">
     <label for="node-input-scopeFlows"><i class="fa fa-window-maximize"></i> Flows</label>
     <input type="text" id="node-input-scopeFlows" style="width:70%" placeholder="flow (tab) ids, comma separated">
+  </div>
+  <div class="form-row" style="margin-top:-8px">
+    <label>&nbsp;</label>
+    <span id="fr-tap-flow-list" style="display:inline-block;width:70%;font-size:12px;line-height:1.9"></span>
   </div>
   <div class="form-row">
     <label for="node-input-scopeNodes"><i class="fa fa-cube"></i> Nodes</label>
