@@ -21,11 +21,25 @@
     var list = $("#fr-tap-flow-list");
     list.empty();
     var current = scopeFlowIds();
-    RED.nodes.eachWorkspace(function (ws) {
+    var filter = ($("#fr-tap-flow-filter").val() || "").trim().toLowerCase();
+
+    // collect, then sort by label so 30 flows are scannable
+    var flows = [];
+    RED.nodes.eachWorkspace(function (ws) { flows.push(ws); });
+    flows.sort(function (a, b) {
+      return (a.label || a.id).localeCompare(b.label || b.id, undefined, { sensitivity: "base" });
+    });
+
+    var shown = 0;
+    flows.forEach(function (ws) {
+      var label = ws.label || ws.id;
+      if (filter && label.toLowerCase().indexOf(filter) === -1 &&
+          ws.id.toLowerCase().indexOf(filter) === -1) return;
+      shown++;
       var selected = current.indexOf(ws.id) !== -1;
-      var link = $('<a href="#" style="margin-right:12px;white-space:nowrap;text-decoration:none;"></a>')
+      var link = $('<a href="#" style="white-space:nowrap;text-decoration:none;"></a>')
         .html((selected ? '<i class="fa fa-check-square-o"></i> ' : '<i class="fa fa-square-o"></i> ') +
-              RED.utils.sanitize(ws.label || ws.id))
+              RED.utils.sanitize(label))
         .attr("title", ws.id + (selected ? " — click to remove" : " — click to add"))
         .on("click", function (e) {
           e.preventDefault();
@@ -37,6 +51,10 @@
         });
       list.append(link);
     });
+    if (shown === 0) {
+      list.append($('<span style="color:#888"></span>')
+        .text(filter ? "no flows match \"" + filter + "\"" : "no flows found"));
+    }
   }
 
   RED.nodes.registerType("flight-recorder-tap", {
@@ -77,6 +95,7 @@
       $("#node-input-scopeAllFlows").on("change", scopeToggle);
       scopeToggle();
       $("#node-input-scopeFlows").on("change keyup", function () { populateFlowList(); });
+      $("#fr-tap-flow-filter").on("keyup search", function () { populateFlowList(); });
       populateFlowList();
     }
   });
@@ -99,9 +118,14 @@
     <label for="node-input-scopeFlows"><i class="fa fa-window-maximize"></i> Flows</label>
     <input type="text" id="node-input-scopeFlows" style="width:70%" placeholder="flow (tab) ids, comma separated">
   </div>
-  <div class="form-row" style="margin-top:-8px">
+  <div class="form-row" style="margin-top:-8px;margin-bottom:4px">
     <label>&nbsp;</label>
-    <span id="fr-tap-flow-list" style="display:inline-block;width:70%;font-size:12px;line-height:1.9"></span>
+    <input type="text" id="fr-tap-flow-filter" placeholder="filter flows…"
+      style="width:70%;font-size:12px;padding:2px 6px;height:24px">
+  </div>
+  <div class="form-row" style="margin-top:0">
+    <label>&nbsp;</label>
+    <span id="fr-tap-flow-list" style="display:inline-flex;flex-wrap:wrap;gap:2px 14px;align-content:flex-start;width:70%;max-height:132px;overflow-y:auto;font-size:12px;line-height:1.7;border:1px solid #ddd;border-radius:3px;padding:6px 8px;box-sizing:border-box;vertical-align:top"></span>
   </div>
   <div class="form-row">
     <label for="node-input-scopeNodes"><i class="fa fa-cube"></i> Nodes</label>
