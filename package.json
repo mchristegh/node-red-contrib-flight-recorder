@@ -16,6 +16,8 @@
     "flight-recorder"
   ],
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=16.0.0"
   "author": "mchristegh",
   "repository": {
     "type": "git",
@@ -25,8 +27,14 @@
     "url": "https://github.com/mchristegh/node-red-contrib-flight-recorder/issues"
   },
   "homepage": "https://github.com/mchristegh/node-red-contrib-flight-recorder/wiki",
-  "engines": {
-    "node": ">=16.0.0"
+  "node-red": {
+    "version": ">=1.1.0",
+    "nodes": {
+      "flight-recorder": "nodes/flight-recorder.js",
+      "flight-recorder-tap": "nodes/flight-recorder-tap.js",
+      "flight-recorder-control": "nodes/flight-recorder-control.js",
+      "flight-recorder-report": "nodes/flight-recorder-report.js"
+    }
   },
   "scripts": {
     "test": "node test-scripts/normalize-harness.js && node test-scripts/core-harness.js && node test-scripts/persistence-harness.js && node test-scripts/inline-harness.js && node test-scripts/control-harness.js && node test-scripts/tap-harness.js && node test-scripts/report-harness.js && node test-scripts/html-sanity.js && node test-scripts/package-sanity.js",
