@@ -27,19 +27,31 @@
 "use strict";
 
 const path = require("path");
-const { RecorderStore } = require(path.join(__dirname, "..", "lib", "recorder-core.js"));
-const registry = require(path.join(__dirname, "..", "lib", "store-registry.js"));
-const inlineInternals = require(path.join(__dirname, "flight-recorder.js"))._internal;
-const { buildStoreConfig, makeWatermark, makePersistenceAdapter, buildMeta } = inlineInternals;
+const { RecorderStore } = require(
+  path.join(__dirname, "..", "lib", "recorder-core.js"),
+);
+const registry = require(
+  path.join(__dirname, "..", "lib", "store-registry.js"),
+);
+const inlineInternals = require(
+  path.join(__dirname, "flight-recorder.js"),
+)._internal;
+const { buildStoreConfig, makeWatermark, makePersistenceAdapter, buildMeta } =
+  inlineInternals;
 
 const FAMILY_TYPES = [
-  "flight-recorder", "flight-recorder-tap",
-  "flight-recorder-control", "flight-recorder-store"
+  "flight-recorder",
+  "flight-recorder-tap",
+  "flight-recorder-control",
+  "flight-recorder-store",
 ];
 
 function parseList(raw) {
   if (typeof raw !== "string") return [];
-  return raw.split(/[\n,]/).map(s => s.trim()).filter(s => s.length > 0);
+  return raw
+    .split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 }
 
 // normalize a mute target into { kind, value, key } or null
@@ -48,17 +60,22 @@ function parseMuteTarget(target) {
     return { kind: "node", value: target.trim(), key: "node:" + target.trim() };
   }
   if (target && typeof target === "object") {
-    const kinds = ["node", "type", "flow"].filter(k => typeof target[k] === "string" && target[k].length > 0);
+    const kinds = ["node", "type", "flow"].filter(
+      (k) => typeof target[k] === "string" && target[k].length > 0,
+    );
     if (kinds.length === 1) {
       const kind = kinds[0];
-      return { kind: kind, value: target[kind], key: kind + ":" + target[kind] };
+      return {
+        kind: kind,
+        value: target[kind],
+        key: kind + ":" + target[kind],
+      };
     }
   }
   return null;
 }
 
 module.exports = function (RED) {
-
   function FlightRecorderTapNode(n) {
     RED.nodes.createNode(this, n);
     const node = this;
@@ -72,16 +89,22 @@ module.exports = function (RED) {
     const store = new RecorderStore(node.id, cfg, {
       persistence: persistence,
       meta: buildMeta(RED),
-      log: { warn: (m) => node.warn(m), error: (e) => node.error(e) }
+      log: { warn: (m) => node.warn(m), error: (e) => node.error(e) },
     });
     store.attach(node);
     node.recorderStore = store;
 
-    const watermark = makeWatermark(n.watermarkProperty, n.watermarkOperator, n.watermarkValue);
-    const autoErrorDump = n.autoErrorDump === true || n.autoErrorDump === "true";
+    const watermark = makeWatermark(
+      n.watermarkProperty,
+      n.watermarkOperator,
+      n.watermarkValue,
+    );
+    const autoErrorDump =
+      n.autoErrorDump === true || n.autoErrorDump === "true";
 
     // --- scope --------------------------------------------------------------
-    const scopeAllFlows = n.scopeAllFlows === true || n.scopeAllFlows === "true";
+    const scopeAllFlows =
+      n.scopeAllFlows === true || n.scopeAllFlows === "true";
     const flowSet = new Set(parseList(n.scopeFlows));
     const nodeSet = new Set(parseList(n.scopeNodes));
     const typeSet = new Set(parseList(n.scopeTypes));
@@ -93,7 +116,7 @@ module.exports = function (RED) {
 
     function computeInScope(src) {
       if (!src || typeof src.id !== "string") return false;
-      if (familySet.has(src.type)) return false;           // hard-coded, always
+      if (familySet.has(src.type)) return false; // hard-coded, always
       if (exclNodeSet.has(src.id)) return false;
       if (exclTypeSet.has(src.type)) return false;
       if (nodeSet.has(src.id)) return true;
@@ -125,9 +148,15 @@ module.exports = function (RED) {
       return null;
     }
     function muteSetFor(kind) {
-      return kind === "node" ? mutedNodes : kind === "type" ? mutedTypes : mutedFlows;
+      return kind === "node"
+        ? mutedNodes
+        : kind === "type"
+          ? mutedTypes
+          : mutedFlows;
     }
-    function totalMutes() { return mutedNodes.size + mutedTypes.size + mutedFlows.size; }
+    function totalMutes() {
+      return mutedNodes.size + mutedTypes.size + mutedFlows.size;
+    }
 
     // --- outputs: [incidents, query, events] ---------------------------------
     function envelope(event, payload) {
@@ -136,11 +165,15 @@ module.exports = function (RED) {
         recorderEvent: event,
         recorderState: store.state,
         storeId: store.storeId,
-        payload: payload
+        payload: payload,
       };
     }
     function sendIncident(incident) {
-      node.send([envelope("incident", incident), null, envelope("incident", incident)]);
+      node.send([
+        envelope("incident", incident),
+        null,
+        envelope("incident", incident),
+      ]);
     }
     function sendQuery(snapshot) {
       node.send([null, envelope("query", snapshot), null]);
@@ -159,11 +192,17 @@ module.exports = function (RED) {
       const muted = totalMutes();
       const suffix = muted > 0 ? " (" + muted + " muted)" : "";
       if (store.state === "paused") {
-        node.status({ fill: "yellow", shape: "ring",
-          text: "paused (" + store.droppedWhilePaused + " dropped)" + suffix });
+        node.status({
+          fill: "yellow",
+          shape: "ring",
+          text: "paused (" + store.droppedWhilePaused + " dropped)" + suffix,
+        });
       } else {
-        node.status({ fill: "green", shape: "dot",
-          text: store.records.length + "/" + store.config.capacity + suffix });
+        node.status({
+          fill: "green",
+          shape: "dot",
+          text: store.records.length + "/" + store.config.capacity + suffix,
+        });
       }
     }
     showStatus();
@@ -174,10 +213,22 @@ module.exports = function (RED) {
     store.on("marked", (e) => sendEvent("marked", e));
     store.on("wrapped", (e) => sendEvent("wrapped", e));
     store.on("truncatedMessage", (e) => sendEvent("truncatedMessage", e));
-    store.on("paused", (e) => { sendEvent("paused", e); showStatus(); });
-    store.on("resumed", (e) => { sendEvent("resumed", e); showStatus(); });
-    store.on("cleared", (e) => { sendEvent("cleared", e); showStatus(); });
-    store.on("persisted", (e) => { persistTrouble = false; sendEvent("persisted", e); });
+    store.on("paused", (e) => {
+      sendEvent("paused", e);
+      showStatus();
+    });
+    store.on("resumed", (e) => {
+      sendEvent("resumed", e);
+      showStatus();
+    });
+    store.on("cleared", (e) => {
+      sendEvent("cleared", e);
+      showStatus();
+    });
+    store.on("persisted", (e) => {
+      persistTrouble = false;
+      sendEvent("persisted", e);
+    });
     store.on("error", (err) => {
       persistTrouble = true;
       sendEvent("recorderError", { message: err && err.message });
@@ -212,16 +263,16 @@ module.exports = function (RED) {
             sourceId: src.id,
             sourceName: src.name || null,
             sourceType: src.type || null,
-            sourcePort: ev.source.port !== undefined ? ev.source.port : null
+            sourcePort: ev.source.port !== undefined ? ev.source.port : null,
           });
           if (result.accepted && watermark && watermark(ev.msg)) {
             store.dump("watermark", {
               condition: {
                 property: n.watermarkProperty,
                 operator: n.watermarkOperator,
-                value: n.watermarkValue
+                value: n.watermarkValue,
               },
-              matchedSeq: result.seq
+              matchedSeq: result.seq,
             });
           }
         } catch (e) {
@@ -235,13 +286,17 @@ module.exports = function (RED) {
     function onCompleteHook(ev) {
       try {
         if (!ev || !ev.error) return;
-        const src = (ev.node && ev.node.node) ? ev.node.node : null;
+        const src = ev.node && ev.node.node ? ev.node.node : null;
         if (!src || !inScope(src)) return;
         // deliberately NOT mute-gated: muted chatter, not muted failures
         store.dump("error", {
           error: ev.error,
-          source: { id: src.id, name: src.name || null, type: src.type || null },
-          msg: ev.msg
+          source: {
+            id: src.id,
+            name: src.name || null,
+            type: src.type || null,
+          },
+          msg: ev.msg,
         });
       } catch (e) {
         sendEvent("recorderError", { message: e && e.message });
@@ -255,17 +310,27 @@ module.exports = function (RED) {
     function muteCmd(target) {
       const t = parseMuteTarget(target);
       if (!t) {
-        sendEvent("commandIgnored", { command: "mute", reason: "invalid target" });
+        sendEvent("commandIgnored", {
+          command: "mute",
+          reason: "invalid target",
+        });
         return { error: "invalid mute target" };
       }
       // verifiably out of scope (node previously seen and rejected) -> refuse loudly
       if (t.kind === "node" && scopeCache.get(t.value) === false) {
-        sendEvent("muteIgnored", { target: t, reason: "outside configured scope" });
+        sendEvent("muteIgnored", {
+          target: t,
+          reason: "outside configured scope",
+        });
         return { error: "target outside scope" };
       }
       const set = muteSetFor(t.kind);
       if (set.has(t.value)) {
-        sendEvent("commandIgnored", { command: "mute", reason: "already muted", target: t });
+        sendEvent("commandIgnored", {
+          command: "mute",
+          reason: "already muted",
+          target: t,
+        });
         return { muted: true, changed: false };
       }
       set.add(t.value);
@@ -279,17 +344,27 @@ module.exports = function (RED) {
     function unmuteCmd(target) {
       const t = parseMuteTarget(target);
       if (!t) {
-        sendEvent("commandIgnored", { command: "unmute", reason: "invalid target" });
+        sendEvent("commandIgnored", {
+          command: "unmute",
+          reason: "invalid target",
+        });
         return { error: "invalid unmute target" };
       }
       const set = muteSetFor(t.kind);
       if (!set.has(t.value)) {
-        sendEvent("commandIgnored", { command: "unmute", reason: "not muted", target: t });
+        sendEvent("commandIgnored", {
+          command: "unmute",
+          reason: "not muted",
+          target: t,
+        });
         return { muted: false, changed: false };
       }
       set.delete(t.value);
       const suppressed = muteCounts.get(t.key) || 0;
-      store.mark({ unmuted: { kind: t.kind, value: t.value }, suppressedCount: suppressed });
+      store.mark({
+        unmuted: { kind: t.kind, value: t.value },
+        suppressedCount: suppressed,
+      });
       sendEvent("unmuted", { target: t, suppressedCount: suppressed });
       showStatus();
       return { muted: false, changed: true, suppressedCount: suppressed };
@@ -301,51 +376,80 @@ module.exports = function (RED) {
       snapshot.tap = {
         autoErrorDump: autoErrorDump,
         mutes: [].concat(
-          [...mutedNodes].map(v => ({ kind: "node", value: v, suppressedCount: muteCounts.get("node:" + v) || 0 })),
-          [...mutedTypes].map(v => ({ kind: "type", value: v, suppressedCount: muteCounts.get("type:" + v) || 0 })),
-          [...mutedFlows].map(v => ({ kind: "flow", value: v, suppressedCount: muteCounts.get("flow:" + v) || 0 }))
+          [...mutedNodes].map((v) => ({
+            kind: "node",
+            value: v,
+            suppressedCount: muteCounts.get("node:" + v) || 0,
+          })),
+          [...mutedTypes].map((v) => ({
+            kind: "type",
+            value: v,
+            suppressedCount: muteCounts.get("type:" + v) || 0,
+          })),
+          [...mutedFlows].map((v) => ({
+            kind: "flow",
+            value: v,
+            suppressedCount: muteCounts.get("flow:" + v) || 0,
+          })),
         ),
         scopeSeen: {
           inScope: [...scopeCache.values()].filter(Boolean).length,
-          outOfScope: [...scopeCache.values()].filter(v => !v).length
-        }
+          outOfScope: [...scopeCache.values()].filter((v) => !v).length,
+        },
       };
       return snapshot;
     }
 
     function runCommand(command, arg) {
       switch (command) {
-        case "dump":   return store.dump("manual", arg);
-        case "clear":  return store.clear();
+        case "dump":
+          return store.dump("manual", arg);
+        case "clear":
+          return store.clear();
         case "pause": {
           const r = store.pause();
-          if (!r.changed) sendEvent("commandIgnored", { command: "pause", state: r.state });
+          if (!r.changed)
+            sendEvent("commandIgnored", { command: "pause", state: r.state });
           return r;
         }
         case "resume": {
           const r = store.resume();
-          if (!r.changed) sendEvent("commandIgnored", { command: "resume", state: r.state });
+          if (!r.changed)
+            sendEvent("commandIgnored", { command: "resume", state: r.state });
           return r;
         }
-        case "mark":   return store.mark(arg);
+        case "mark":
+          return store.mark(arg);
         case "query": {
           const snapshot = enrichedQuery();
           sendQuery(snapshot);
           return snapshot;
         }
-        case "mute":   return muteCmd(arg);
-        case "unmute": return unmuteCmd(arg);
+        case "mute":
+          return muteCmd(arg);
+        case "unmute":
+          return unmuteCmd(arg);
         default:
-          sendEvent("commandIgnored", { command: command, reason: "unknown command" });
+          sendEvent("commandIgnored", {
+            command: command,
+            reason: "unknown command",
+          });
           return { error: "unknown command: " + command };
       }
     }
-    registry.register(node.id, { store: store, runCommand: runCommand, kind: "tap" });
+    registry.register(node.id, {
+      store: store,
+      runCommand: runCommand,
+      kind: "tap",
+    });
 
     // --- input: command port (convenience alias) ------------------------------------------
     node.on("input", function (msg) {
       if (!msg || typeof msg.payload !== "string") {
-        sendEvent("commandIgnored", { command: null, reason: "command must be a string payload" });
+        sendEvent("commandIgnored", {
+          command: null,
+          reason: "command must be a string payload",
+        });
         return;
       }
       const command = msg.payload.trim().toLowerCase();
@@ -358,7 +462,10 @@ module.exports = function (RED) {
 
     // --- close ---------------------------------------------------------------------------
     node.on("close", function (removed, done) {
-      if (typeof removed === "function") { done = removed; removed = false; }
+      if (typeof removed === "function") {
+        done = removed;
+        removed = false;
+      }
       RED.hooks.remove("*." + hookName);
       registry.deregister(node.id);
       store.detach(node, { removed: !!removed });

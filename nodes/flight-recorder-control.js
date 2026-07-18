@@ -22,12 +22,22 @@
 "use strict";
 
 const path = require("path");
-const registry = require(path.join(__dirname, "..", "lib", "store-registry.js"));
+const registry = require(
+  path.join(__dirname, "..", "lib", "store-registry.js"),
+);
 
-const COMMANDS = ["dump", "clear", "pause", "resume", "mark", "query", "mute", "unmute"];
+const COMMANDS = [
+  "dump",
+  "clear",
+  "pause",
+  "resume",
+  "mark",
+  "query",
+  "mute",
+  "unmute",
+];
 
 module.exports = function (RED) {
-
   function FlightRecorderControlNode(n) {
     RED.nodes.createNode(this, n);
     const node = this;
@@ -42,8 +52,8 @@ module.exports = function (RED) {
           command: command || null,
           targetId: targetId || null,
           result: ok ? result : null,
-          reason: ok ? null : reason
-        }
+          reason: ok ? null : reason,
+        },
       };
       // preserve correlation with the triggering msg where present
       if (msg && msg._msgid !== undefined) out.inReplyTo = msg._msgid;
@@ -97,7 +107,9 @@ module.exports = function (RED) {
     });
 
     node.on("close", function (removed, done) {
-      if (typeof removed === "function") { done = removed; }
+      if (typeof removed === "function") {
+        done = removed;
+      }
       if (done) done();
     });
   }

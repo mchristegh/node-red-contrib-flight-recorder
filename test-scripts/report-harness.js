@@ -16,17 +16,27 @@ const os = require("os");
 const fs = require("fs");
 const path = require("path");
 
-const { render, detect, _internal: RI } =
-  require(path.join(__dirname, "..", "lib", "report.js"));
-const { RecorderStore } =
-  require(path.join(__dirname, "..", "lib", "recorder-core.js"));
-const reportNodeModule = require(path.join(__dirname, "..", "nodes", "flight-recorder-report.js"));
+const { render, detect } = require(
+  path.join(__dirname, "..", "lib", "report.js"),
+);
+const { RecorderStore } = require(
+  path.join(__dirname, "..", "lib", "recorder-core.js"),
+);
+const reportNodeModule = require(
+  path.join(__dirname, "..", "nodes", "flight-recorder-report.js"),
+);
 const { resolveTokens, templateRegex } = reportNodeModule._internal;
 
 let failures = 0;
 function check(label, cond, detail) {
-  if (cond) { console.log("PASS  " + label); }
-  else { failures++; console.log("FAIL  " + label + (detail !== undefined ? "  [" + detail + "]" : "")); }
+  if (cond) {
+    console.log("PASS  " + label);
+  } else {
+    failures++;
+    console.log(
+      "FAIL  " + label + (detail !== undefined ? "  [" + detail + "]" : ""),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -34,33 +44,51 @@ function check(label, cond, detail) {
 // ---------------------------------------------------------------------------
 function makeIncident() {
   let t = Date.UTC(2026, 6, 13, 14, 32, 0); // 2026-07-13 14:32:00 UTC
-  const store = new RecorderStore("frdemo.rec.tap", {
-    capacity: 20, maxRecordBytes: 4096
-  }, { now: () => t });
+  const store = new RecorderStore(
+    "frdemo.rec.tap",
+    {
+      capacity: 20,
+      maxRecordBytes: 4096,
+    },
+    { now: () => t },
+  );
 
-  const src = { sourceId: "f1", sourceName: "sensor sim (errors every 10th)", sourceType: "function" };
-  const inj = { sourceId: "i1", sourceName: "every 2s", sourceType: "inject", sourcePort: 0 };
+  const src = {
+    sourceId: "f1",
+    sourceName: "sensor sim (errors every 10th)",
+    sourceType: "function",
+  };
+  const inj = {
+    sourceId: "i1",
+    sourceName: "every 2s",
+    sourceType: "inject",
+    sourcePort: 0,
+  };
 
-  store.capture({ msg: { payload: { temp: 71, reading: 31 } }, ...src });   // seq 1
+  store.capture({ msg: { payload: { temp: 71, reading: 31 } }, ...src }); // seq 1
   t += 2000;
-  store.capture({ msg: { payload: 1752398000000 }, ...inj });               // seq 2, gap 2.0s
+  store.capture({ msg: { payload: 1752398000000 }, ...inj }); // seq 2, gap 2.0s
   t += 2000;
-  store.capture({ msg: { payload: { temp: 74, reading: 32 } }, ...src });   // seq 3, gap 2.0s
-  t += 8000;                                                                // anomaly: 4x median
-  store.capture({ msg: { payload: { temp: 88, reading: 33 } }, ...src });   // seq 4, gap 8.0s ⚠
+  store.capture({ msg: { payload: { temp: 74, reading: 32 } }, ...src }); // seq 3, gap 2.0s
+  t += 8000; // anomaly: 4x median
+  store.capture({ msg: { payload: { temp: 88, reading: 33 } }, ...src }); // seq 4, gap 8.0s ⚠
   t += 1000;
-  store.mark({ note: "manual mark from cockpit" });                         // seq 5
+  store.mark({ note: "manual mark from cockpit" }); // seq 5
   t += 1000;
   store.capture({ msg: { payload: { blob: "z".repeat(20000) } }, ...src }); // seq 6, truncated
   t += 2000;
-  store.capture({ msg: { payload: { temp: 94, reading: 47 } }, ...src });   // seq 7
+  store.capture({ msg: { payload: { temp: 94, reading: 47 } }, ...src }); // seq 7
 
   t += 5000; // 14:32:21
   const boom = new Error("sensor glitch (simulated)");
   const incident = store.dump("error", {
     error: boom,
-    source: { id: "f1", name: "sensor sim (errors every 10th)", type: "function" },
-    msg: { payload: { temp: 61, reading: 40 } }
+    source: {
+      id: "f1",
+      name: "sensor sim (errors every 10th)",
+      type: "function",
+    },
+    msg: { payload: { temp: 61, reading: 40 } },
   });
   // simulate a restart boundary: first two records restored from persist
   incident.records[0].restored = true;
@@ -70,17 +98,33 @@ function makeIncident() {
 
 function makeSnapshot() {
   return {
-    storeId: "frdemo.rec.tap", state: "recording", capacity: 50,
+    storeId: "frdemo.rec.tap",
+    state: "recording",
+    capacity: 50,
     restoredFromPersist: false,
-    config: { capacity: 50, captureMode: "full", maxRecordBytes: 16384,
-      persist: false, incidentCooldownMs: 15000 },
-    stats: { recordCount: 50, firstSeq: 12, lastSeq: 61, spanMs: 98000,
-      droppedWhilePaused: 0, wrapCount: 12, truncatedCount: 0 },
+    config: {
+      capacity: 50,
+      captureMode: "full",
+      maxRecordBytes: 16384,
+      persist: false,
+      incidentCooldownMs: 15000,
+    },
+    stats: {
+      recordCount: 50,
+      firstSeq: 12,
+      lastSeq: 61,
+      spanMs: 98000,
+      droppedWhilePaused: 0,
+      wrapCount: 12,
+      truncatedCount: 0,
+    },
     tap: {
       autoErrorDump: true,
-      mutes: [{ kind: "node", value: "frdemo.inject.tick", suppressedCount: 4 }],
-      scopeSeen: { inScope: 3, outOfScope: 6 }
-    }
+      mutes: [
+        { kind: "node", value: "frdemo.inject.tick", suppressedCount: 4 },
+      ],
+      scopeSeen: { inScope: 3, outOfScope: 6 },
+    },
   };
 }
 
@@ -92,12 +136,27 @@ const snapshot = makeSnapshot();
 // ===========================================================================
 {
   check("R1 incident", detect({ payload: incident }) === "incident");
-  check("R1 incident via events copy", detect({ recorderEvent: "incident", payload: incident }) === "incident");
+  check(
+    "R1 incident via events copy",
+    detect({ recorderEvent: "incident", payload: incident }) === "incident",
+  );
   check("R1 snapshot", detect({ payload: snapshot }) === "snapshot");
-  check("R1 snapshot via query envelope", detect({ recorderEvent: "query", payload: snapshot }) === "snapshot");
-  check("R1 event", detect({ recorderEvent: "muted", payload: { target: {} } }) === "event");
-  check("R1 ack unknown", detect({ payload: { ok: true, command: "dump" } }) === "unknown");
-  check("R1 garbage unknown", detect({ payload: "hello" }) === "unknown" && detect(null) === "unknown");
+  check(
+    "R1 snapshot via query envelope",
+    detect({ recorderEvent: "query", payload: snapshot }) === "snapshot",
+  );
+  check(
+    "R1 event",
+    detect({ recorderEvent: "muted", payload: { target: {} } }) === "event",
+  );
+  check(
+    "R1 ack unknown",
+    detect({ payload: { ok: true, command: "dump" } }) === "unknown",
+  );
+  check(
+    "R1 garbage unknown",
+    detect({ payload: "hello" }) === "unknown" && detect(null) === "unknown",
+  );
 }
 
 // ===========================================================================
@@ -108,34 +167,81 @@ const snapshot = makeSnapshot();
   const out = r.output;
   const lines = out.split("\n");
   check("R2 kind", r.kind === "incident");
-  check("R2 header trigger", lines[1] === " FLIGHT RECORDER INCIDENT · ERROR", lines[1]);
+  check(
+    "R2 header trigger",
+    lines[1] === " FLIGHT RECORDER INCIDENT · ERROR",
+    lines[1],
+  );
   check("R2 store line", out.includes(" store      frdemo.rec.tap"));
-  check("R2 at line UTC", out.includes(" at         2026-07-13 14:32:21"), out.match(/ at.*$/m));
-  check("R2 cause front and center", out.includes(' cause      "sensor glitch (simulated)"'));
-  check("R2 cause source", out.includes("from: sensor sim (errors every 10th) [function]"),
-        (out.match(/from:.*$/m) || [])[0]);
-  check("R2 stats line", out.includes(" 7 records · span 16.0s · median gap 2.0s"),
-        (out.match(/records · span.*$/m) || [])[0]);
-  check("R2 counters line", out.includes(" wraps 0 · truncated 1 · dropped while paused 0"));
+  check(
+    "R2 at line UTC",
+    out.includes(" at         2026-07-13 14:32:21"),
+    out.match(/ at.*$/m),
+  );
+  check(
+    "R2 cause front and center",
+    out.includes(' cause      "sensor glitch (simulated)"'),
+  );
+  check(
+    "R2 cause source",
+    out.includes("from: sensor sim (errors every 10th) [function]"),
+    (out.match(/from:.*$/m) || [])[0],
+  );
+  check(
+    "R2 stats line",
+    out.includes(" 7 records · span 16.0s · median gap 2.0s"),
+    (out.match(/records · span.*$/m) || [])[0],
+  );
+  check(
+    "R2 counters line",
+    out.includes(" wraps 0 · truncated 1 · dropped while paused 0"),
+  );
 
   // timeline rows
-  const row1 = lines.find(l => l.startsWith("    1 "));
-  check("R2 first row", row1 === "    1     0.0s       —   sensor sim (errors [function] " +
-        '{"temp":71,"reading":31}', JSON.stringify(row1));
-  const row4 = lines.find(l => l.startsWith("    4 "));
-  check("R2 anomaly flagged", row4 && row4.includes("8.0s ⚠"), JSON.stringify(row4));
-  const row2 = lines.find(l => l.startsWith("    2 "));
-  check("R2 inject row", row2 && row2.includes("every 2s [inject]") && row2.includes("1752398000000"),
-        JSON.stringify(row2));
-  check("R2 mark rule", out.includes('─── MARK · {"note":"manual mark from cockpit"} ─'));
-  const row6 = lines.find(l => l.startsWith("    6 "));
-  check("R2 truncated scissored", row6 && row6.includes("✂ "), JSON.stringify(row6));
+  const row1 = lines.find((l) => l.startsWith("    1 "));
+  check(
+    "R2 first row",
+    row1 ===
+      "    1     0.0s       —   sensor sim (errors [function] " +
+        '{"temp":71,"reading":31}',
+    JSON.stringify(row1),
+  );
+  const row4 = lines.find((l) => l.startsWith("    4 "));
+  check(
+    "R2 anomaly flagged",
+    row4 && row4.includes("8.0s ⚠"),
+    JSON.stringify(row4),
+  );
+  const row2 = lines.find((l) => l.startsWith("    2 "));
+  check(
+    "R2 inject row",
+    row2 &&
+      row2.includes("every 2s [inject]") &&
+      row2.includes("1752398000000"),
+    JSON.stringify(row2),
+  );
+  check(
+    "R2 mark rule",
+    out.includes('─── MARK · {"note":"manual mark from cockpit"} ─'),
+  );
+  const row6 = lines.find((l) => l.startsWith("    6 "));
+  check(
+    "R2 truncated scissored",
+    row6 && row6.includes("✂ "),
+    JSON.stringify(row6),
+  );
   check("R2 restart boundary", out.includes("─── RESTART ─"));
-  check("R2 restart placed after restored", out.indexOf("─── RESTART") > out.indexOf("    2 ") &&
-        out.indexOf("─── RESTART") < out.indexOf("    3 "));
+  check(
+    "R2 restart placed after restored",
+    out.indexOf("─── RESTART") > out.indexOf("    2 ") &&
+      out.indexOf("─── RESTART") < out.indexOf("    3 "),
+  );
   check("R2 footer legend", out.includes("⚠ gap ≥ 3× median"));
-  check("R2 secret width respected", !lines.some(l => l.startsWith("    6 ") && l.length > 55 + 60 + 2),
-        (lines.find(l => l.startsWith("    6 ")) || "").length);
+  check(
+    "R2 secret width respected",
+    !lines.some((l) => l.startsWith("    6 ") && l.length > 55 + 60 + 2),
+    (lines.find((l) => l.startsWith("    6 ")) || "").length,
+  );
 }
 
 // ===========================================================================
@@ -146,30 +252,66 @@ const snapshot = makeSnapshot();
   const out = r.output;
   check("R3 kind", r.kind === "snapshot");
   check("R3 header", out.includes("FLIGHT RECORDER STATUS · frdemo.rec.tap"));
-  check("R3 state line", out.includes(" state      recording          restored: no"),
-        (out.match(/ state.*$/m) || [])[0]);
-  check("R3 recording line", out.includes(" recording  50/50 records · span 1m 38s"));
-  check("R3 counters", out.includes(" counters   wraps 12 · truncated 0 · dropped 0"));
-  check("R3 config", out.includes(" config     full capture · 16384 B max · cooldown 15.0s · persist off"));
-  check("R3 tap line", out.includes(" tap        auto-error ON · mutes: node:frdemo.inject.tick (4 suppressed) · seen 3 in / 6 out of scope"),
-        (out.match(/ tap.*$/m) || [])[0]);
+  check(
+    "R3 state line",
+    out.includes(" state      recording          restored: no"),
+    (out.match(/ state.*$/m) || [])[0],
+  );
+  check(
+    "R3 recording line",
+    out.includes(" recording  50/50 records · span 1m 38s"),
+  );
+  check(
+    "R3 counters",
+    out.includes(" counters   wraps 12 · truncated 0 · dropped 0"),
+  );
+  check(
+    "R3 config",
+    out.includes(
+      " config     full capture · 16384 B max · cooldown 15.0s · persist off",
+    ),
+  );
+  check(
+    "R3 tap line",
+    out.includes(
+      " tap        auto-error ON · mutes: node:frdemo.inject.tick (4 suppressed) · seen 3 in / 6 out of scope",
+    ),
+    (out.match(/ tap.*$/m) || [])[0],
+  );
 
   // snapshot without tap: no tap line
-  const plain = Object.assign({}, snapshot); delete plain.tap;
-  check("R3 no tap line for inline", !render({ payload: plain }, {}).output.includes(" tap "));
+  const plain = Object.assign({}, snapshot);
+  delete plain.tap;
+  check(
+    "R3 no tap line for inline",
+    !render({ payload: plain }, {}).output.includes(" tap "),
+  );
 }
 
 // ===========================================================================
 // R4: event one-liner and unknown
 // ===========================================================================
 {
-  const ev = render({ recorderEvent: "muted", storeId: "s6-tap",
-    payload: { target: { kind: "node", value: "m1" } } }, {});
-  check("R4 event line", ev.kind === "event" &&
-        ev.output === '[recorder event] muted · {"target":{"kind":"node","value":"m1"}} · store s6-tap',
-        ev.output);
+  const ev = render(
+    {
+      recorderEvent: "muted",
+      storeId: "s6-tap",
+      payload: { target: { kind: "node", value: "m1" } },
+    },
+    {},
+  );
+  check(
+    "R4 event line",
+    ev.kind === "event" &&
+      ev.output ===
+        '[recorder event] muted · {"target":{"kind":"node","value":"m1"}} · store s6-tap',
+    ev.output,
+  );
   const un = render({ payload: { ok: false } }, {});
-  check("R4 unknown line", un.kind === "unknown" && /not a recorder payload/.test(un.output));
+  check(
+    "R4 unknown line",
+    un.kind === "unknown" && /not a recorder payload/.test(un.output),
+  );
 }
 
 // ===========================================================================
@@ -178,14 +320,23 @@ const snapshot = makeSnapshot();
 {
   const out = render({ payload: incident }, { format: "markdown" }).output;
   check("R5 md header", out.startsWith("## Flight Recorder Incident · ERROR"));
-  check("R5 md cause blockquote", out.includes("> **cause** sensor glitch (simulated)"));
-  check("R5 md table header", out.includes("| seq | +time | gap | source | payload |"));
+  check(
+    "R5 md cause blockquote",
+    out.includes("> **cause** sensor glitch (simulated)"),
+  );
+  check(
+    "R5 md table header",
+    out.includes("| seq | +time | gap | source | payload |"),
+  );
   check("R5 md anomaly bold", out.includes("**8.0s** ⚠"));
   check("R5 md mark row", out.includes("**── MARK ──**"));
   check("R5 md restart row", out.includes("**── RESTART ──**"));
   const snap = render({ payload: snapshot }, { format: "markdown" }).output;
-  check("R5 md snapshot", snap.startsWith("## Flight Recorder Status") &&
-        snap.includes("- **state**: recording"));
+  check(
+    "R5 md snapshot",
+    snap.startsWith("## Flight Recorder Status") &&
+      snap.includes("- **state**: recording"),
+  );
 }
 
 // ===========================================================================
@@ -195,7 +346,10 @@ const snapshot = makeSnapshot();
   const out = render({ payload: incident }, { format: "html" }).output;
   check("R6 doctype", out.startsWith("<!DOCTYPE html>"));
   check("R6 family orange", out.includes("#F0954F"));
-  check("R6 self-contained", !/https?:\/\//.test(out) && !out.includes("<script"));
+  check(
+    "R6 self-contained",
+    !/https?:\/\//.test(out) && !out.includes("<script"),
+  );
   check("R6 anomaly class", out.includes('class="anom"'));
   check("R6 mark row", out.includes('class="mark"'));
   check("R6 cause block", out.includes("sensor glitch (simulated)"));
@@ -203,26 +357,56 @@ const snapshot = makeSnapshot();
   const evil = JSON.parse(JSON.stringify(incident));
   evil.records[0].msg = { payload: "<script>alert(1)</script>" };
   const evilOut = render({ payload: evil }, { format: "html" }).output;
-  check("R6 escaping", !evilOut.includes("<script>alert") &&
-        evilOut.includes("&lt;script&gt;alert"));
+  check(
+    "R6 escaping",
+    !evilOut.includes("<script>alert") &&
+      evilOut.includes("&lt;script&gt;alert"),
+  );
   const snap = render({ payload: snapshot }, { format: "html" }).output;
-  check("R6 html snapshot", snap.includes("Flight Recorder Status") && snap.startsWith("<!DOCTYPE"));
+  check(
+    "R6 html snapshot",
+    snap.includes("Flight Recorder Status") && snap.startsWith("<!DOCTYPE"),
+  );
 }
 
 // ===========================================================================
 // R7: previewChars respected; empty incident renders
 // ===========================================================================
 {
-  const out = render({ payload: incident }, { format: "text", previewChars: 10 }).output;
-  const row1 = out.split("\n").find(l => l.startsWith("    1 "));
+  const out = render(
+    { payload: incident },
+    { format: "text", previewChars: 10 },
+  ).output;
+  const row1 = out.split("\n").find((l) => l.startsWith("    1 "));
   const preview = row1.slice(55);
-  check("R7 preview clipped", preview.length <= 10 && preview.endsWith("…"), JSON.stringify(preview));
+  check(
+    "R7 preview clipped",
+    preview.length <= 10 && preview.endsWith("…"),
+    JSON.stringify(preview),
+  );
 
-  const empty = { incidentId: "e", storeId: "s", trigger: "manual", triggeredAt: Date.UTC(2026, 0, 1),
-    context: null, stats: { recordCount: 0, firstSeq: null, lastSeq: null, spanMs: null,
-      droppedWhilePaused: 0, wrapCount: 0, truncatedCount: 0 }, records: [] };
+  const empty = {
+    incidentId: "e",
+    storeId: "s",
+    trigger: "manual",
+    triggeredAt: Date.UTC(2026, 0, 1),
+    context: null,
+    stats: {
+      recordCount: 0,
+      firstSeq: null,
+      lastSeq: null,
+      spanMs: null,
+      droppedWhilePaused: 0,
+      wrapCount: 0,
+      truncatedCount: 0,
+    },
+    records: [],
+  };
   const eout = render({ payload: empty }, {}).output;
-  check("R7 empty incident", eout.includes("(recording was empty)") && eout.includes("median gap —"));
+  check(
+    "R7 empty incident",
+    eout.includes("(recording was empty)") && eout.includes("median gap —"),
+  );
 }
 
 // ===========================================================================
@@ -232,37 +416,64 @@ function makeRED(userDir) {
   const registered = {};
   return {
     nodes: {
-      registerType(name, ctor) { registered[name] = ctor; },
+      registerType(name, ctor) {
+        registered[name] = ctor;
+      },
       createNode(node, n) {
         node.id = n.id || "rep" + Math.random().toString(36).slice(2);
         node._handlers = {};
-        node.on = function (evt, fn) { node._handlers[evt] = fn; };
-        node.receive = function (msg) { node._handlers["input"](msg); };
+        node.on = function (evt, fn) {
+          node._handlers[evt] = fn;
+        };
+        node.receive = function (msg) {
+          node._handlers["input"](msg);
+        };
         node.close = function (removed) {
-          return new Promise(res => node._handlers["close"](removed, res));
+          return new Promise((res) => node._handlers["close"](removed, res));
         };
         node.sent = [];
-        node.send = function (out) { node.sent.push(out); };
+        node.send = function (out) {
+          node.sent.push(out);
+        };
         node.statusCalls = [];
-        node.status = function (s) { node.statusCalls.push(s); };
+        node.status = function (s) {
+          node.statusCalls.push(s);
+        };
         node.warned = [];
-        node.warn = function (m) { node.warned.push(m); };
+        node.warn = function (m) {
+          node.warned.push(m);
+        };
         node.errored = [];
-        node.error = function (e) { node.errored.push(e); };
+        node.error = function (e) {
+          node.errored.push(e);
+        };
       },
-      get(name) { return registered[name]; }
+      get(name) {
+        return registered[name];
+      },
     },
-    settings: { userDir: userDir }
+    settings: { userDir: userDir },
   };
 }
 function makeReport(RED, cfg) {
   const Ctor = RED.nodes.get("flight-recorder-report");
   const node = {};
-  Ctor.call(node, Object.assign({
-    name: "", format: "text", destination: "message", directory: "",
-    filenameTemplate: "{date}_{time}_{trigger}_{storeId}",
-    rawJson: false, retention: "100", previewChars: "60"
-  }, cfg));
+  Ctor.call(
+    node,
+    Object.assign(
+      {
+        name: "",
+        format: "text",
+        destination: "message",
+        directory: "",
+        filenameTemplate: "{date}_{time}_{trigger}_{storeId}",
+        rawJson: false,
+        retention: "100",
+        previewChars: "60",
+      },
+      cfg,
+    ),
+  );
   return node;
 }
 const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "flightrec-report-"));
@@ -271,7 +482,7 @@ function freshDir(name) {
   fs.mkdirSync(d, { recursive: true });
   return d;
 }
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async function main() {
   const RED = makeRED(tmpBase);
@@ -285,12 +496,25 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     const msg = { _msgid: "m1", topic: "keep-me", payload: incident };
     node.receive(msg);
     const out = node.sent[0];
-    check("R8 payload is rendered text", typeof out.payload === "string" &&
-          out.payload.includes("FLIGHT RECORDER INCIDENT · ERROR"));
+    check(
+      "R8 payload is rendered text",
+      typeof out.payload === "string" &&
+        out.payload.includes("FLIGHT RECORDER INCIDENT · ERROR"),
+    );
     check("R8 topic preserved", out.topic === "keep-me" && out._msgid === "m1");
-    check("R8 report meta", out.report.kind === "incident" && out.report.format === "text" &&
-          out.report.source === incident && out.report.files.length === 0);
-    check("R8 status", node.statusCalls.some(s => s.fill === "green" && /incident ✓$/.test(s.text)));
+    check(
+      "R8 report meta",
+      out.report.kind === "incident" &&
+        out.report.format === "text" &&
+        out.report.source === incident &&
+        out.report.files.length === 0,
+    );
+    check(
+      "R8 status",
+      node.statusCalls.some(
+        (s) => s.fill === "green" && /incident ✓$/.test(s.text),
+      ),
+    );
     await node.close(false);
   }
 
@@ -301,16 +525,38 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     const dir = freshDir("r9");
     const node = makeReport(RED, { destination: "file", directory: dir });
     node.receive({ payload: incident });
-    const expected = path.join(dir, "2026-07-13_14-32-21_error_frdemo.rec.tap.txt");
-    check("R9 file written with template name", fs.existsSync(expected),
-          fs.readdirSync(dir).join(","));
-    check("R9 file content is the report", fs.readFileSync(expected, "utf8")
-          .includes("FLIGHT RECORDER INCIDENT · ERROR"));
+    const expected = path.join(
+      dir,
+      "2026-07-13_14-32-21_error_frdemo.rec.tap.txt",
+    );
+    check(
+      "R9 file written with template name",
+      fs.existsSync(expected),
+      fs.readdirSync(dir).join(","),
+    );
+    check(
+      "R9 file content is the report",
+      fs
+        .readFileSync(expected, "utf8")
+        .includes("FLIGHT RECORDER INCIDENT · ERROR"),
+    );
     const out = node.sent[0];
-    check("R9 confirmation payload", out.payload === "report saved: " + expected, out.payload);
-    check("R9 files meta", out.report.files.length === 1 && out.report.files[0].ok === true &&
-          out.report.files[0].kind === "report" && out.report.files[0].bytes > 0);
-    check("R9 status saved", node.statusCalls.some(s => /saved/.test(s.text)));
+    check(
+      "R9 confirmation payload",
+      out.payload === "report saved: " + expected,
+      out.payload,
+    );
+    check(
+      "R9 files meta",
+      out.report.files.length === 1 &&
+        out.report.files[0].ok === true &&
+        out.report.files[0].kind === "report" &&
+        out.report.files[0].bytes > 0,
+    );
+    check(
+      "R9 status saved",
+      node.statusCalls.some((s) => /saved/.test(s.text)),
+    );
     await node.close(false);
   }
 
@@ -319,18 +565,37 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   // =========================================================================
   {
     const dir = freshDir("r10");
-    const node = makeReport(RED, { destination: "both", directory: dir,
-      format: "html", rawJson: true });
+    const node = makeReport(RED, {
+      destination: "both",
+      directory: dir,
+      format: "html",
+      rawJson: true,
+    });
     node.receive({ payload: incident });
     const stem = "2026-07-13_14-32-21_error_frdemo.rec.tap";
-    check("R10 pair on disk", fs.existsSync(path.join(dir, stem + ".html")) &&
-          fs.existsSync(path.join(dir, stem + ".json")), fs.readdirSync(dir).join(","));
-    const back = JSON.parse(fs.readFileSync(path.join(dir, stem + ".json"), "utf8"));
-    check("R10 raw JSON lossless", JSON.stringify(back) === JSON.stringify(incident));
+    check(
+      "R10 pair on disk",
+      fs.existsSync(path.join(dir, stem + ".html")) &&
+        fs.existsSync(path.join(dir, stem + ".json")),
+      fs.readdirSync(dir).join(","),
+    );
+    const back = JSON.parse(
+      fs.readFileSync(path.join(dir, stem + ".json"), "utf8"),
+    );
+    check(
+      "R10 raw JSON lossless",
+      JSON.stringify(back) === JSON.stringify(incident),
+    );
     const out = node.sent[0];
-    check("R10 both: payload is document", out.payload.startsWith("<!DOCTYPE html>"));
-    check("R10 two files reported", out.report.files.length === 2 &&
-          out.report.files.map(f => f.kind).join(",") === "report,raw");
+    check(
+      "R10 both: payload is document",
+      out.payload.startsWith("<!DOCTYPE html>"),
+    );
+    check(
+      "R10 two files reported",
+      out.report.files.length === 2 &&
+        out.report.files.map((f) => f.kind).join(",") === "report,raw",
+    );
     await node.close(false);
   }
 
@@ -339,14 +604,23 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   // =========================================================================
   {
     const dir = freshDir("r11");
-    const node = makeReport(RED, { destination: "file", directory: dir, rawJson: true });
+    const node = makeReport(RED, {
+      destination: "file",
+      directory: dir,
+      rawJson: true,
+    });
     node.receive({ payload: incident });
     node.receive({ payload: incident });
     const names = fs.readdirSync(dir).sort();
     const stem = "2026-07-13_14-32-21_error_frdemo.rec.tap";
-    check("R11 suffixed pair", names.join(",") ===
-          [stem + "-2.json", stem + "-2.txt", stem + ".json", stem + ".txt"].sort().join(","),
-          names.join(","));
+    check(
+      "R11 suffixed pair",
+      names.join(",") ===
+        [stem + "-2.json", stem + "-2.txt", stem + ".json", stem + ".txt"]
+          .sort()
+          .join(","),
+      names.join(","),
+    );
     await node.close(false);
   }
 
@@ -356,19 +630,31 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   {
     const dir = freshDir("r12");
     fs.writeFileSync(path.join(dir, "keep-me.txt"), "not ours", "utf8");
-    const node = makeReport(RED, { destination: "file", directory: dir,
-      rawJson: true, retention: "2" });
-    node.receive({ payload: incident });           // pair 1 (oldest)
+    const node = makeReport(RED, {
+      destination: "file",
+      directory: dir,
+      rawJson: true,
+      retention: "2",
+    });
+    node.receive({ payload: incident }); // pair 1 (oldest)
     await sleep(20);
-    node.receive({ payload: incident });           // pair 2 (-2)
+    node.receive({ payload: incident }); // pair 2 (-2)
     await sleep(20);
-    node.receive({ payload: incident });           // pair 3 (-3) -> prune pair 1
+    node.receive({ payload: incident }); // pair 3 (-3) -> prune pair 1
     const names = fs.readdirSync(dir).sort();
     const stem = "2026-07-13_14-32-21_error_frdemo.rec.tap";
-    check("R12 oldest pair pruned", !names.includes(stem + ".txt") && !names.includes(stem + ".json"),
-          names.join(","));
-    check("R12 newest two pairs kept", names.includes(stem + "-2.txt") && names.includes(stem + "-2.json") &&
-          names.includes(stem + "-3.txt") && names.includes(stem + "-3.json"));
+    check(
+      "R12 oldest pair pruned",
+      !names.includes(stem + ".txt") && !names.includes(stem + ".json"),
+      names.join(","),
+    );
+    check(
+      "R12 newest two pairs kept",
+      names.includes(stem + "-2.txt") &&
+        names.includes(stem + "-2.json") &&
+        names.includes(stem + "-3.txt") &&
+        names.includes(stem + "-3.json"),
+    );
     check("R12 foreign file untouched", names.includes("keep-me.txt"));
     await node.close(false);
   }
@@ -378,19 +664,31 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   // =========================================================================
   {
     const n1 = makeReport(RED, { destination: "message", rawJson: true });
-    check("R13 rawJson without file warned", n1.warned.length === 1 &&
-          /raw JSON requires file output/.test(n1.warned[0]));
+    check(
+      "R13 rawJson without file warned",
+      n1.warned.length === 1 &&
+        /raw JSON requires file output/.test(n1.warned[0]),
+    );
     n1.receive({ payload: incident });
-    check("R13 still renders", n1.sent[0].payload.includes("INCIDENT") &&
-          n1.sent[0].report.files.length === 0);
+    check(
+      "R13 still renders",
+      n1.sent[0].payload.includes("INCIDENT") &&
+        n1.sent[0].report.files.length === 0,
+    );
 
     const n2 = makeReport(RED, { destination: "file", directory: "" });
-    check("R13 file without directory warned", n2.warned.length === 1 &&
-          /no directory configured/.test(n2.warned[0]));
+    check(
+      "R13 file without directory warned",
+      n2.warned.length === 1 && /no directory configured/.test(n2.warned[0]),
+    );
     n2.receive({ payload: incident });
-    check("R13 confirmation names the problem", /file output disabled/.test(n2.sent[0].payload),
-          n2.sent[0].payload);
-    await n1.close(false); await n2.close(false);
+    check(
+      "R13 confirmation names the problem",
+      /file output disabled/.test(n2.sent[0].payload),
+      n2.sent[0].payload,
+    );
+    await n1.close(false);
+    await n2.close(false);
   }
 
   // =========================================================================
@@ -398,18 +696,39 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   // =========================================================================
   {
     const dir = freshDir("r14");
-    const node = makeReport(RED, { destination: "both", directory: dir, rawJson: true });
-    node.receive({ recorderEvent: "wrapped", storeId: "x", payload: { wrapCount: 1 } });
-    check("R14 event one-liner, never filed", node.sent[0].payload.startsWith("[recorder event] wrapped") &&
-          node.sent[0].report.files.length === 0 && fs.readdirSync(dir).length === 0);
+    const node = makeReport(RED, {
+      destination: "both",
+      directory: dir,
+      rawJson: true,
+    });
+    node.receive({
+      recorderEvent: "wrapped",
+      storeId: "x",
+      payload: { wrapCount: 1 },
+    });
+    check(
+      "R14 event one-liner, never filed",
+      node.sent[0].payload.startsWith("[recorder event] wrapped") &&
+        node.sent[0].report.files.length === 0 &&
+        fs.readdirSync(dir).length === 0,
+    );
     node.receive({ recorderEvent: "query", payload: snapshot });
-    check("R14 snapshot filed as status pair",
-          fs.readdirSync(dir).some(f => /_status_frdemo\.rec\.tap\.txt$/.test(f)) &&
-          fs.readdirSync(dir).some(f => /_status_frdemo\.rec\.tap\.json$/.test(f)),
-          fs.readdirSync(dir).join(","));
+    check(
+      "R14 snapshot filed as status pair",
+      fs
+        .readdirSync(dir)
+        .some((f) => /_status_frdemo\.rec\.tap\.txt$/.test(f)) &&
+        fs
+          .readdirSync(dir)
+          .some((f) => /_status_frdemo\.rec\.tap\.json$/.test(f)),
+      fs.readdirSync(dir).join(","),
+    );
     node.receive({ payload: { random: true } });
-    check("R14 unknown passes with note", /not a recorder payload/.test(node.sent[2].payload) &&
-          node.sent[2].report.source.random === true);
+    check(
+      "R14 unknown passes with note",
+      /not a recorder payload/.test(node.sent[2].payload) &&
+        node.sent[2].report.source.random === true,
+    );
     await node.close(false);
   }
 
@@ -417,16 +736,35 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   // R15: token/template internals — sanitization and own-file matching
   // =========================================================================
   {
-    const hostile = Object.assign({}, incident, { storeId: "../../etc/passwd" });
-    const stem = resolveTokens("{date}_{trigger}_{storeId}", hostile, "incident", "text");
-    check("R15 hostile storeId sanitized", stem.indexOf("/") === -1 &&
-          stem.indexOf("\\") === -1 && !/^\./.test(stem), stem);
+    const hostile = Object.assign({}, incident, {
+      storeId: "../../etc/passwd",
+    });
+    const stem = resolveTokens(
+      "{date}_{trigger}_{storeId}",
+      hostile,
+      "incident",
+      "text",
+    );
+    check(
+      "R15 hostile storeId sanitized",
+      stem.indexOf("/") === -1 &&
+        stem.indexOf("\\") === -1 &&
+        !/^\./.test(stem),
+      stem,
+    );
 
     const re = templateRegex("{date}_{time}_{trigger}_{storeId}");
-    check("R15 matches own files", re.test("2026-07-13_14-32-21_error_frdemo.rec.tap.txt") &&
-          re.test("2026-07-13_14-32-21_error_frdemo.rec.tap-2.json"));
-    check("R15 rejects foreign files", !re.test("keep-me.txt") && !re.test("notes.json") &&
-          !re.test("2026-07-13_error.txt"));
+    check(
+      "R15 matches own files",
+      re.test("2026-07-13_14-32-21_error_frdemo.rec.tap.txt") &&
+        re.test("2026-07-13_14-32-21_error_frdemo.rec.tap-2.json"),
+    );
+    check(
+      "R15 rejects foreign files",
+      !re.test("keep-me.txt") &&
+        !re.test("notes.json") &&
+        !re.test("2026-07-13_error.txt"),
+    );
   }
 
   // =========================================================================
@@ -434,24 +772,46 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   // =========================================================================
   {
     const withMeta = JSON.parse(JSON.stringify(incident));
-    withMeta.meta = { package: "node-red-contrib-flight-recorder@0.2.0",
-      nodeRed: "4.0.2", node: "v22.22.2", hostname: "yellow" };
+    withMeta.meta = {
+      package: "node-red-contrib-flight-recorder@0.2.0",
+      nodeRed: "4.0.2",
+      node: "v22.22.2",
+      hostname: "yellow",
+    };
     const txt = render({ payload: withMeta }, { format: "text" }).output;
-    check("R16 text runtime line", txt.includes(
-      " runtime    node-red-contrib-flight-recorder@0.2.0 · Node-RED 4.0.2 · node v22.22.2 · host yellow"),
-      (txt.match(/ runtime.*$/m) || [])[0]);
+    check(
+      "R16 text runtime line",
+      txt.includes(
+        " runtime    node-red-contrib-flight-recorder@0.2.0 · Node-RED 4.0.2 · node v22.22.2 · host yellow",
+      ),
+      (txt.match(/ runtime.*$/m) || [])[0],
+    );
     const md = render({ payload: withMeta }, { format: "markdown" }).output;
-    check("R16 md runtime line", md.includes("*node-red-contrib-flight-recorder@0.2.0 · Node-RED 4.0.2"));
+    check(
+      "R16 md runtime line",
+      md.includes("*node-red-contrib-flight-recorder@0.2.0 · Node-RED 4.0.2"),
+    );
     const html = render({ payload: withMeta }, { format: "html" }).output;
     check("R16 html runtime line", html.includes("host yellow"));
 
     const partial = JSON.parse(JSON.stringify(incident));
-    partial.meta = { package: "node-red-contrib-flight-recorder@0.2.0", nodeRed: null,
-      node: "v22.0.0", hostname: null };
-    check("R16 null fields skipped", render({ payload: partial }, {}).output.includes(
-      " runtime    node-red-contrib-flight-recorder@0.2.0 · node v22.0.0"));
+    partial.meta = {
+      package: "node-red-contrib-flight-recorder@0.2.0",
+      nodeRed: null,
+      node: "v22.0.0",
+      hostname: null,
+    };
+    check(
+      "R16 null fields skipped",
+      render({ payload: partial }, {}).output.includes(
+        " runtime    node-red-contrib-flight-recorder@0.2.0 · node v22.0.0",
+      ),
+    );
 
-    check("R16 no meta, no line", !render({ payload: incident }, {}).output.includes(" runtime "));
+    check(
+      "R16 no meta, no line",
+      !render({ payload: incident }, {}).output.includes(" runtime "),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -462,4 +822,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   } else {
     console.log("ALL TESTS PASSED");
   }
-})().catch((e) => { console.log("HARNESS CRASH:", e); process.exit(1); });
+})().catch((e) => {
+  console.log("HARNESS CRASH:", e);
+  process.exit(1);
+});

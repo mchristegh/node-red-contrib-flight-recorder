@@ -1,87 +1,135 @@
 <!-- nodes/flight-recorder.html — editor definition for the inline recorder -->
 
 <script type="text/javascript">
-(function () {
-  function watermarkValueToggle() {
-    var op = $("#node-input-watermarkOperator").val();
-    var disabled = (op === "none" || op === "exists" || op === "notexists");
-    $("#node-input-watermarkValue").prop("disabled", disabled);
-  }
-
-  RED.nodes.registerType("flight-recorder", {
-    category: "function",
-    color: "#F0954F", /* like real flight recorders, it's orange */
-    defaults: {
-      name:               { value: "" },
-      capacity:           { value: "100", validate: RED.validators.number() },
-      captureMode:        { value: "full" },
-      maxRecordBytes:     { value: "16384", validate: RED.validators.number() },
-      redactPaths:        { value: "" },
-      persist:            { value: false },
-      incidentCooldownMs: { value: "0", validate: RED.validators.number() },
-      watermarkProperty:  { value: "" },
-      watermarkOperator:  { value: "none" },
-      watermarkValue:     { value: "" }
-    },
-    inputs: 1,
-    outputs: 4,
-    icon: "font-awesome/fa-dot-circle-o",
-    paletteLabel: "recorder",
-    label: function () { return this.name || "flight recorder"; },
-    labelStyle: function () { return this.name ? "node_label_italic" : ""; },
-    inputLabels: "traffic (passes through untouched)",
-    outputLabels: function (i) {
-      return ["passthrough", "incidents", "query", "events"][i];
-    },
-    oneditprepare: function () {
-      $("#node-input-watermarkOperator").on("change", watermarkValueToggle);
-      watermarkValueToggle();
+  (function () {
+    function watermarkValueToggle() {
+      var op = $("#node-input-watermarkOperator").val();
+      var disabled = op === "none" || op === "exists" || op === "notexists";
+      $("#node-input-watermarkValue").prop("disabled", disabled);
     }
-  });
-})();
+
+    RED.nodes.registerType("flight-recorder", {
+      category: "function",
+      color: "#F0954F" /* like real flight recorders, it's orange */,
+      defaults: {
+        name: { value: "" },
+        capacity: { value: "100", validate: RED.validators.number() },
+        captureMode: { value: "full" },
+        maxRecordBytes: { value: "16384", validate: RED.validators.number() },
+        redactPaths: { value: "" },
+        persist: { value: false },
+        incidentCooldownMs: { value: "0", validate: RED.validators.number() },
+        watermarkProperty: { value: "" },
+        watermarkOperator: { value: "none" },
+        watermarkValue: { value: "" },
+      },
+      inputs: 1,
+      outputs: 4,
+      icon: "font-awesome/fa-dot-circle-o",
+      paletteLabel: "recorder",
+      label: function () {
+        return this.name || "flight recorder";
+      },
+      labelStyle: function () {
+        return this.name ? "node_label_italic" : "";
+      },
+      inputLabels: "traffic (passes through untouched)",
+      outputLabels: function (i) {
+        return ["passthrough", "incidents", "query", "events"][i];
+      },
+      oneditprepare: function () {
+        $("#node-input-watermarkOperator").on("change", watermarkValueToggle);
+        watermarkValueToggle();
+      },
+    });
+  })();
 </script>
 
 <script type="text/html" data-template-name="flight-recorder">
   <div class="form-row">
     <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
-    <input type="text" id="node-input-name" placeholder="Name">
+    <input type="text" id="node-input-name" placeholder="Name" />
   </div>
   <div class="form-row">
-    <label for="node-input-capacity"><i class="fa fa-database"></i> Capacity</label>
-    <input type="text" id="node-input-capacity" style="width:100px" placeholder="100">
+    <label for="node-input-capacity"
+      ><i class="fa fa-database"></i> Capacity</label
+    >
+    <input
+      type="text"
+      id="node-input-capacity"
+      style="width:100px"
+      placeholder="100"
+    />
     <span style="margin-left:6px;">messages kept in the recording</span>
   </div>
   <div class="form-row">
-    <label for="node-input-captureMode"><i class="fa fa-camera"></i> Capture</label>
+    <label for="node-input-captureMode"
+      ><i class="fa fa-camera"></i> Capture</label
+    >
     <select id="node-input-captureMode" style="width:180px">
       <option value="full">full messages</option>
       <option value="summary">summaries only</option>
     </select>
   </div>
   <div class="form-row">
-    <label for="node-input-maxRecordBytes"><i class="fa fa-compress"></i> Max bytes</label>
-    <input type="text" id="node-input-maxRecordBytes" style="width:100px" placeholder="16384">
-    <span style="margin-left:6px;">per record before falling back to a summary</span>
+    <label for="node-input-maxRecordBytes"
+      ><i class="fa fa-compress"></i> Max bytes</label
+    >
+    <input
+      type="text"
+      id="node-input-maxRecordBytes"
+      style="width:100px"
+      placeholder="16384"
+    />
+    <span style="margin-left:6px;"
+      >per record before falling back to a summary</span
+    >
   </div>
   <div class="form-row" style="align-items:flex-start;">
-    <label for="node-input-redactPaths" style="vertical-align:top"><i class="fa fa-user-secret"></i> Redact</label>
-    <textarea id="node-input-redactPaths" rows="3" style="width:70%"
-      placeholder="one msg property path per line, e.g.&#10;payload.password&#10;headers.authorization"></textarea>
+    <label for="node-input-redactPaths" style="vertical-align:top"
+      ><i class="fa fa-user-secret"></i> Redact</label
+    >
+    <textarea
+      id="node-input-redactPaths"
+      rows="3"
+      style="width:70%"
+      placeholder="one msg property path per line, e.g.&#10;payload.password&#10;headers.authorization"
+    ></textarea>
   </div>
   <div class="form-row">
-    <label for="node-input-incidentCooldownMs"><i class="fa fa-clock-o"></i> Cooldown</label>
-    <input type="text" id="node-input-incidentCooldownMs" style="width:100px" placeholder="0">
-    <span style="margin-left:6px;">ms between automatic incidents (0 = none)</span>
+    <label for="node-input-incidentCooldownMs"
+      ><i class="fa fa-clock-o"></i> Cooldown</label
+    >
+    <input
+      type="text"
+      id="node-input-incidentCooldownMs"
+      style="width:100px"
+      placeholder="0"
+    />
+    <span style="margin-left:6px;"
+      >ms between automatic incidents (0 = none)</span
+    >
   </div>
   <div class="form-row">
     <label for="node-input-persist"><i class="fa fa-hdd-o"></i> Persist</label>
-    <input type="checkbox" id="node-input-persist" style="width:auto; vertical-align:middle;">
-    <span style="margin-left:6px;">recording survives deploys and restarts</span>
+    <input
+      type="checkbox"
+      id="node-input-persist"
+      style="width:auto; vertical-align:middle;"
+    />
+    <span style="margin-left:6px;"
+      >recording survives deploys and restarts</span
+    >
   </div>
-  <hr>
+  <hr />
   <div class="form-row">
     <label><i class="fa fa-flag"></i> Watermark</label>
-    <input type="text" id="node-input-watermarkProperty" style="width:170px" placeholder="msg property, e.g. payload.temp">
+    <input
+      type="text"
+      id="node-input-watermarkProperty"
+      style="width:170px"
+      placeholder="msg property, e.g. payload.temp"
+    />
     <select id="node-input-watermarkOperator" style="width:110px">
       <option value="none">disabled</option>
       <option value="eq">==</option>
@@ -94,49 +142,73 @@
       <option value="exists">exists</option>
       <option value="notexists">not exists</option>
     </select>
-    <input type="text" id="node-input-watermarkValue" style="width:110px" placeholder="value">
+    <input
+      type="text"
+      id="node-input-watermarkValue"
+      style="width:110px"
+      placeholder="value"
+    />
   </div>
-  <div class="form-tips">A message matching the watermark automatically dumps the recording as an incident (subject to the cooldown).</div>
+  <div class="form-tips">
+    A message matching the watermark automatically dumps the recording as an
+    incident (subject to the cooldown).
+  </div>
 </script>
 
 <script type="text/html" data-help-name="flight-recorder">
-  <p>An inline <b>flight recorder</b>: keeps a rolling recording of the last
-  messages that passed along this wire, and dumps it as a structured
-  <i>incident</i> on demand or when a watermark condition matches — so you can
-  see the moments <i>leading up to</i> a problem, not just the present.</p>
+  <p>
+    An inline <b>flight recorder</b>: keeps a rolling recording of the last
+    messages that passed along this wire, and dumps it as a structured
+    <i>incident</i> on demand or when a watermark condition matches — so you can
+    see the moments <i>leading up to</i> a problem, not just the present.
+  </p>
 
   <h3>Guarantees</h3>
-  <p><b>Passthrough is sacred.</b> Output 1 forwards the original message
-  untouched, always. No capture problem can block or mutate traffic, and
-  pausing the recorder stops the tape, never the flow.</p>
+  <p>
+    <b>Passthrough is sacred.</b> Output 1 forwards the original message
+    untouched, always. No capture problem can block or mutate traffic, and
+    pausing the recorder stops the tape, never the flow.
+  </p>
 
   <h3>Outputs</h3>
   <ol>
     <li><b>Passthrough</b> — the original message. Nothing else, ever.</li>
-    <li><b>Incidents</b> — recording dumps: <code>msg.payload</code> is the
-      incident (trigger, context, stats, records).</li>
-    <li><b>Query</b> — status snapshots in reply to <code>query</code> commands.</li>
-    <li><b>Events</b> — everything observable: incident copies, marks, wrap,
+    <li>
+      <b>Incidents</b> — recording dumps: <code>msg.payload</code> is the
+      incident (trigger, context, stats, records).
+    </li>
+    <li>
+      <b>Query</b> — status snapshots in reply to <code>query</code> commands.
+    </li>
+    <li>
+      <b>Events</b> — everything observable: incident copies, marks, wrap,
       pause/resume, truncation, persistence, ignored commands. Each message
-      carries <code>msg.recorderEvent</code>.</li>
+      carries <code>msg.recorderEvent</code>.
+    </li>
   </ol>
 
   <h3>Commands</h3>
-  <p>This node accepts <b>no commands on its input</b> — its input is traffic
-  only. Wire a <b>flight-recorder-control</b> node and point it here to send
-  <code>dump</code>, <code>clear</code>, <code>pause</code>,
-  <code>resume</code>, <code>mark</code> and <code>query</code>.</p>
+  <p>
+    This node accepts <b>no commands on its input</b> — its input is traffic
+    only. Wire a <b>flight-recorder-control</b> node and point it here to send
+    <code>dump</code>, <code>clear</code>, <code>pause</code>,
+    <code>resume</code>, <code>mark</code> and <code>query</code>.
+  </p>
 
   <h3>Records</h3>
-  <p>Each record carries <code>seq</code> (monotonic forever),
-  <code>capturedAt</code>, <code>deltaMs</code> since the previous capture,
-  the <code>source</code> node, and the encoded message. Oversized messages
-  fall back to a summary with <code>truncated: true</code>; redacted paths are
-  masked before anything is stored or previewed. Records restored after a
-  restart carry <code>restored: true</code>.</p>
+  <p>
+    Each record carries <code>seq</code> (monotonic forever),
+    <code>capturedAt</code>, <code>deltaMs</code> since the previous capture,
+    the <code>source</code> node, and the encoded message. Oversized messages
+    fall back to a summary with <code>truncated: true</code>; redacted paths are
+    masked before anything is stored or previewed. Records restored after a
+    restart carry <code>restored: true</code>.
+  </p>
 
   <h3>Persistence</h3>
-  <p>When enabled, the recording is written (debounced) to
-  <code>&lt;userDir&gt;/flight-recorder/</code> and survives deploys and
-  Node-RED restarts. Deleting the node removes its file.</p>
+  <p>
+    When enabled, the recording is written (debounced) to
+    <code>&lt;userDir&gt;/flight-recorder/</code> and survives deploys and
+    Node-RED restarts. Deleting the node removes its file.
+  </p>
 </script>

@@ -29,7 +29,11 @@
     }
   },
   "scripts": {
-    "test": "node test-scripts/normalize-harness.js && node test-scripts/core-harness.js && node test-scripts/persistence-harness.js && node test-scripts/inline-harness.js && node test-scripts/control-harness.js && node test-scripts/tap-harness.js && node test-scripts/report-harness.js && node test-scripts/html-sanity.js && node test-scripts/package-sanity.js"
+    "test": "node test-scripts/normalize-harness.js && node test-scripts/core-harness.js && node test-scripts/persistence-harness.js && node test-scripts/inline-harness.js && node test-scripts/control-harness.js && node test-scripts/tap-harness.js && node test-scripts/report-harness.js && node test-scripts/html-sanity.js && node test-scripts/package-sanity.js",
+    "prepublishOnly": "node test-scripts/normalize-harness.js && node test-scripts/core-harness.js && node test-scripts/persistence-harness.js && node test-scripts/inline-harness.js && node test-scripts/control-harness.js && node test-scripts/tap-harness.js && node test-scripts/report-harness.js && node test-scripts/html-sanity.js && node test-scripts/package-sanity.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "files": [
     "nodes",
@@ -37,5 +41,13 @@
     "examples",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-html": "^8.1.4",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.5"
+  }
 }
